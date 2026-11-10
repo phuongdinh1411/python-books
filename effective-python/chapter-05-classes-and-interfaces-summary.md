@@ -69,7 +69,7 @@ Python's class system is flexible and powerful, but that flexibility makes it ea
       def __init__(self):
           super().__init__()  # correct
   ```
-- `super()` respects Python's **Method Resolution Order (MRO)** — ensures each `__init__` is called exactly once in diamond hierarchies
+- `super()` follows Python's **Method Resolution Order (MRO)**. A diamond hierarchy initializes cooperatively only if participating methods call `super()` consistently and accept compatible arguments.
 - `super()` without arguments (Python 3) is equivalent to `super(Child, self)` but less error-prone
 
 ### Item 41: Consider Composing Functionality with Mix-in Classes
@@ -105,15 +105,16 @@ Python's class system is flexible and powerful, but that flexibility makes it ea
   ```python
   from collections.abc import MutableSequence
 
-  class SortedList(MutableSequence):
+  class ListWrapper(MutableSequence):
       def __init__(self): self._data = []
       def __getitem__(self, i): return self._data[i]
-      def __setitem__(self, i, v): self._data[i] = v; self._data.sort()
+      def __setitem__(self, i, v): self._data[i] = v
       def __delitem__(self, i): del self._data[i]
       def __len__(self): return len(self._data)
-      def insert(self, i, v): self._data.insert(i, v); self._data.sort()
+      def insert(self, i, v): self._data.insert(i, v)
   ```
 - Implementing the abstract methods gets you `append`, `extend`, `pop`, `remove`, `count`, `index` for free
+- ABC mixins supply derived methods, not proof of correct semantics. For example, automatically sorting after `insert(i, v)` would violate the usual positional `MutableSequence` contract.
 - Important ABCs: `Sequence`, `MutableSequence`, `Mapping`, `MutableMapping`, `Set`, `Iterator`
 
 ## Key Takeaways

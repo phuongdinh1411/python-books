@@ -46,7 +46,7 @@ def house_records_from_file(path):
 - Ask: "What is the maximum memory footprint of this function?" — minimize it
 
 ### Built-in Iterators
-- `range()`, `map()`, `filter()`, `zip()`, `enumerate()` all return **lazy iterators**, not lists
+- `range()` is a lazy, re-iterable **sequence**, not an iterator. `map()`, `filter()`, `zip()`, and `enumerate()` return iterators.
 
 ### The Iterator Protocol (formal)
 An object is an **iterator** if it defines:
@@ -61,4 +61,4 @@ An object is **iterable** if it defines:
 - Prefer generator functions over building lists when processing large or streamed data
 - Chain generators into composable pipelines: source → filter → mapper → sink
 - Use `yield from` to delegate to sub-generators cleanly
-- Know the difference between **iterator** (produces values once) and **iterable** (can produce fresh iterators repeatedly)
+- Know the difference between **iterator** (single-pass producer) and **iterable** (anything accepted by `iter()`). Containers often provide fresh iterators; iterators themselves are also iterables.

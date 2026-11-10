@@ -51,7 +51,7 @@ Generates an HTML file where **darker yellow lines = more calls back into Python
 - Lines outside loops rarely matter even if shaded
 
 ### Type Annotations
-```python
+```cython
 cdef unsigned int i, n
 cdef double complex z, c
 ```
@@ -67,8 +67,9 @@ z.real * z.real + z.imag * z.imag < 4   # no sqrt needed
 → additional **2× speedup**
 
 ### Cython + NumPy (Memoryview)
-```python
+```cython
 def calculate_z(int maxiter, double complex[:] zs, double complex[:] cs):
+    ...
 ```
 - `double complex[:]` declares a 1D buffer-protocol array (works with numpy arrays)
 - Avoids Python-level dereferencing per element → slightly faster than pure Python lists
@@ -180,4 +181,4 @@ lib = ffi.dlopen("diffusion.so")
 | **cffi** | Cleaner C library wrapping; inline C support |
 | **Rust/PyO3** | New extensions needing memory safety + performance |
 
-> **Rule**: Always handwrite C assumptions with benchmarks. Compiler-generated C (Cython) can match handwritten C — don't assume manual C is faster until measured.
+> **Rule**: Always verify handwritten-C assumptions with benchmarks. Compiler-generated C (Cython) can match handwritten C — don't assume manual C is faster until measured.

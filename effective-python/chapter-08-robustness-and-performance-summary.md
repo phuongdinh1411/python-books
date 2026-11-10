@@ -18,14 +18,15 @@ Each block has a distinct, non-overlapping purpose:
 ```python
 def read_config(path):
     try:
-        handle = open(path)
+        handle = open(path, encoding="utf-8")
     except FileNotFoundError:
         return default_config()
     else:
-        data = handle.read()  # runs only if open succeeded
-        return parse(data)
-    finally:
-        handle.close()  # always runs
+        try:
+            data = handle.read()  # runs only if open succeeded
+            return parse(data)
+        finally:
+            handle.close()  # close only after successful acquisition
 ```
 The `else` block is often overlooked but important: it prevents accidentally catching exceptions thrown by the *success* path code.
 
@@ -77,6 +78,7 @@ The `else` block is often overlooked but important: it prevents accidentally cat
   copyreg.pickle(GameState, pickle_game_state)
   ```
 - Add version fields to pickle representations to handle schema evolution
+- **Security:** never unpickle untrusted data — loading a pickle can execute arbitrary code. Versioning does not make it safe.
 - Consider alternatives (JSON, protobuf, msgpack) for cross-language or long-term storage
 
 ### Item 69: Use `decimal` When Precision Is Paramount
@@ -115,7 +117,7 @@ The `else` block is often overlooked but important: it prevents accidentally cat
   q.append(item)    # O(1)
   item = q.popleft()  # O(1)
   ```
-- Always use `deque` for FIFO queues; use `list` for stacks (LIFO with `append`/`pop`)
+- Use `deque` for local FIFO operations; use `queue.Queue` for threaded coordination and `asyncio.Queue` for coroutine coordination
 
 ### Item 72: Consider Searching Sorted Sequences with `bisect`
 - `in` on a list is O(n); `bisect` uses binary search for O(log n) on sorted lists:
@@ -124,7 +126,7 @@ The `else` block is often overlooked but important: it prevents accidentally cat
   index = bisect.bisect_left(sorted_list, target)
   ```
 - `bisect_left` / `bisect_right` find insertion points
-- Use `insort` to maintain a sorted list efficiently
+- `insort` finds the position in O(log n), but inserting into a list still costs O(n) because elements shift
 - Only use when data is already sorted and random access by index is needed
 
 ### Item 73: Know How to Use `heapq` for Priority Queues

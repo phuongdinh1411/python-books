@@ -31,6 +31,7 @@ class Movie(TypedDict):
 ```
 - Gives a named, documented structure to what would otherwise be an opaque `dict`
 - Typechecker validates key names and value types
+- At runtime these are ordinary dictionaries: `TypedDict` does not validate JSON or enforce required keys. Validate untrusted input at the boundary.
 - Better than `dict[str, Any]` for structured data; similar to a dataclass but JSON-friendly
 
 ## Creating New Collections
@@ -56,7 +57,7 @@ from collections import UserList
 class SortedList(UserList):
     def append(self, item): ...  # maintain sorted order
 ```
-Prefer `UserList`/`UserDict` over subclassing `list`/`dict` directly to avoid subtle MRO issues.
+`UserList`/`UserDict` are wrapper classes from `collections`, not built-ins. They are often easier to customize because built-in collection methods can bypass Python-level overrides; the issue is not merely MRO. Preserve the collection contract across every mutation method.
 
 ### Abstract Base Classes (ABCs)
 From `collections.abc`: `Sequence`, `MutableSequence`, `Mapping`, `MutableMapping`, `Iterable`, `Iterator`, etc.

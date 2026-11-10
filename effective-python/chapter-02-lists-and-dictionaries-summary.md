@@ -45,9 +45,9 @@ Lists and dictionaries are Python's most-used data structures. Python provides r
 
 ### Item 15: Be Cautious When Relying on `dict` Insertion Ordering
 - Python 3.7+: `dict` preserves insertion order — guaranteed by the language spec
-- But code that *depends* on insertion order may surprise readers from Python 2 backgrounds
-- When order is meaningful, consider using `collections.OrderedDict` to signal intent
-- Be careful with `**kwargs` and function parameters — their order is preserved but relying on it can be fragile
+- The real pitfall is accepting a general mapping while assuming it has `dict` ordering: a custom mapping may iterate differently
+- Use a concrete `dict` contract or sort explicitly when your algorithm requires a particular order
+- `OrderedDict` is useful for order-specific operations such as `move_to_end` and order-sensitive equality, not required merely to preserve insertion order
 
 ### Item 16: Prefer `get` Over `in` and `KeyError` to Handle Missing Dictionary Keys
 - Three patterns, ranked worst to best:

@@ -10,7 +10,7 @@ Writing Python for a team — or for others to use — requires discipline aroun
 - Install with: `python3 -m pip install <package>`
 - Always prefer well-maintained community packages over reimplementing common functionality
 - Check: download counts, GitHub stars, last release date, open issues, license
-- Every PyPI package has a license — review it before using in commercial software
+- Packages may omit license metadata or contain unclear licensing — verify the actual license before using them, especially commercially
 
 ### Item 83: Use Virtual Environments for Isolated and Reproducible Dependencies
 - System-wide `pip install` pollutes the global Python and breaks across projects
@@ -70,9 +70,9 @@ Writing Python for a team — or for others to use — requires discipline aroun
   DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
   DB_URL = os.environ.get("DATABASE_URL", "sqlite:///dev.db")
   ```
-- Import `config` everywhere — changes propagate automatically
+- Module-level configuration is evaluated at import time; later environment-variable changes do not automatically update those values. Use an explicit loader when reloads are needed.
 - Avoid hardcoding environment-specific values in business logic
-- For complex configs, consider `pydantic.BaseSettings` (auto-reads env vars with validation)
+- For complex configs, consider `pydantic-settings.BaseSettings` with Pydantic v2 (`pydantic.BaseSettings` was the v1 API)
 
 ### Item 87: Define a Root Exception to Insulate Callers from APIs
 - Callers who catch specific exceptions are coupled to your internal implementation
@@ -101,7 +101,7 @@ Writing Python for a team — or for others to use — requires discipline aroun
       return other_module.thing
   ```
 - **Solution 2: Restructure** — extract shared code into a third module that both can import without circularity
-- **Solution 3: Import only what you need** — `from module import specific_name` is sometimes enough to break cycles
+- **Solution 3: Defer attribute access** — `import module` can sometimes avoid reading a name from a partially initialized module too early; `from module import name` often causes that failure instead
 - Prefer restructuring (solution 2) as the permanent fix; deferred imports as a quick fix
 
 ### Item 89: Consider `warnings` to Refactor and Migrate Usage
@@ -131,7 +131,7 @@ Writing Python for a team — or for others to use — requires discipline aroun
       return [x for x in items if callback(x)]
   ```
 - Gradually add annotations: start with function signatures, then internal variables
-- Use `from __future__ import annotations` (Python 3.10+) to enable forward references easily
+- Use `from __future__ import annotations` (available from Python 3.7) to postpone annotation evaluation on versions using eager evaluation and support forward references
 - Typecheckers as CI gates: fail builds when type errors are introduced
 
 ## Key Takeaways

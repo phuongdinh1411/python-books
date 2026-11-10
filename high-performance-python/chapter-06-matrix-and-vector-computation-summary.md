@@ -53,7 +53,7 @@ grid, next_grid = next_grid, grid   # O(1) swap, no copy
 
 Result: **~16% speedup** from this single change.
 
-> **General rule**: Allocating memory involves kernel calls and cache-clearing. Move allocations outside hot loops whenever possible.
+> **General rule**: Allocations and initialization add overhead; not every allocation calls the kernel. Reuse buffers in hot loops when profiling shows allocation costs matter.
 
 ---
 
@@ -117,14 +117,17 @@ out = evolve(grid, dt)            # compute on GPU
 ```
 
 ### Critical performance gotcha: data transfer
-Every `.cpu()`, `.numpy()`, or `.items()` call on a GPU tensor **copies data back to RAM** — very expensive!
+For CUDA tensors, `.cpu()` transfers data to host memory, and `.item()` retrieves a scalar and commonly synchronizes execution. `.numpy()` normally requires a CPU tensor (use `.cpu().numpy()` for a CUDA tensor); on CPU it often shares storage rather than copying. These transfers/synchronizations can be expensive.
 - Adding one `grid.cpu()` per loop step caused a **2.54× slowdown** on a 2048×2048 grid
 
 ### GPU-Specific Operations: Convolutions
 The Laplacian operation can be expressed as a **2D convolution**:
 ```python
 kernel = [[0, -1, 0], [-1, 4, -1], [0, -1, 0]]
-conv = torch.nn.Conv2d(..., padding_mode='circular', ...)
+conv = torch.nn.Conv2d(1, 1, kernel_size=3, padding=1,
+                       padding_mode='circular', bias=False)
+# Initialize the weights from kernel; choose the sign convention and
+# tensor shape required by the diffusion equation.
 ```
 GPUs have specialized hardware for convolutions → 4× additional speedup on large grids.
 
@@ -138,7 +141,7 @@ GPUs have specialized hardware for convolutions → 4× additional speedup on la
 CPU cannot use 16-bit float instructions efficiently; GPU excels at them.
 Lower precision → faster compute and more data fits per cache line.
 
-**Automatic Mixed Precision (AMP)**: `torch.amp.autocast` automatically selects the best precision per operation without sacrificing accuracy.
+**Automatic Mixed Precision (AMP)**: `torch.amp.autocast` selects lower precision for supported operations. Validate error tolerances, stability, and model metrics; reduced precision is not accuracy-neutral.
 
 ---
 
@@ -189,6 +192,6 @@ Using `scipy.ndimage.filters.laplace` *looked* like an easy win — simpler code
 2. Eliminate allocations inside hot loops — allocate once, reuse with in-place operations
 3. NumPy gives ~100× speedup over pure Python for numerical work
 4. GPUs give ~5,000–20,000× speedup for this type of problem — but data transfer is the hidden cost
-5. Lower numerical precision (float32, float16) gives free speedups on GPU
+5. Lower numerical precision can improve speed and memory use on supported hardware, but may change results — validate accuracy first
 6. Convolutions are a GPU-optimized primitive — reformulate problems as convolutions when possible
-7. Specialized code beats general-purpose library code — profile to verify
+7. Specialized code may beat general-purpose code for a measured workload; benchmark rather than assuming either wins

@@ -16,7 +16,10 @@ foo = some_decorator(foo)
 
 ### The Basic Decorator Pattern
 ```python
+from functools import wraps
+
 def printlog(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         print("CALLING: " + func.__name__)
         return func(*args, **kwargs)
@@ -26,7 +29,8 @@ def printlog(func):
 def foo(x):
     print(x + 2)
 ```
-- Use `*args, **kwargs` in `wrapper` to make the decorator compatible with **any function signature**
+- Use `*args, **kwargs` to forward arguments; use `@wraps(func)` in function wrappers to preserve metadata and expose `__wrapped__`
+- This basic wrapper targets synchronous functions. Async functions need an `async def wrapper` that awaits the original if the added behavior should span execution.
 - The prototypical form is the one to memorize
 
 ### Data in Decorators — Scope Matters

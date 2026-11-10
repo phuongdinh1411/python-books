@@ -12,12 +12,23 @@ The Streams API is the easiest way to write network applications with asyncio:
 - `asyncio.start_server(handler, host, port)` → TCP server that calls `handler(reader, writer)` per connection
 
 ```python
-async def echo(reader, writer):
-    while data := await reader.readline():
-        writer.write(data.upper())
-        await writer.drain()
+import asyncio
 
-asyncio.run(asyncio.start_server(echo, '127.0.0.1', 8888))
+async def echo(reader, writer):
+    try:
+        while data := await reader.readline():
+            writer.write(data.upper())
+            await writer.drain()
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+async def main():
+    server = await asyncio.start_server(echo, '127.0.0.1', 8888)
+    async with server:
+        await server.serve_forever()
+
+asyncio.run(main())
 ```
 
 ### Case Study: Message Queue (v1 — Naive)
@@ -31,7 +42,7 @@ asyncio.run(asyncio.start_server(echo, '127.0.0.1', 8888))
 - Each client gets its own `asyncio.Queue` + a dedicated `send_client()` coroutine
 - Each channel gets its own `asyncio.Queue` + a `chan_sender()` coroutine
 - Result: a slow subscriber only affects itself — other subscribers are unblocked
-- **Key design pattern:** Use `asyncio.Queue` to buffer and decouple producers and consumers
+- **Key design pattern:** Use bounded `asyncio.Queue(maxsize=...)` instances to decouple producers and consumers. Choose a policy for full queues (wait, drop, or disconnect); unbounded buffering only turns a slow consumer into growing RAM usage.
 
 ---
 
@@ -132,8 +143,8 @@ async def do_receiver():
 ## asyncpg — High-Performance PostgreSQL Client
 
 - Written by Yury Selivanov (core asyncio developer)
-- Works directly with the PostgreSQL binary protocol → fastest async Postgres client
-- Supports prepared statements, scrollable cursors, connection pooling
+- Works directly with the PostgreSQL binary protocol; benchmark it against other clients for your workload
+- Supports prepared statements, cursors, connection pooling
 
 ```python
 async with asyncpg.create_pool(dsn) as pool:
@@ -146,7 +157,7 @@ async with asyncpg.create_pool(dsn) as pool:
 - PostgreSQL can act as an event bus: `NOTIFY channel 'data'` sends an event to all `LISTEN`-ers
 - Strategy: when app writes to DB, DB notifies all app instances → each instance updates its cache
 - asyncpg supports `conn.add_listener(channel, callback)` for receiving these notifications
-- **Key insight:** PostgreSQL's LISTEN/NOTIFY turns the DB into a lightweight message broker for cache invalidation
+- **Key insight:** LISTEN/NOTIFY is a lightweight notification mechanism, not a durable queue. Disconnected listeners miss events; design cache expiry or resynchronization for reconnects.
 
 ---
 
@@ -164,5 +175,5 @@ async with asyncpg.create_pool(dsn) as pool:
 - **Janus queue** bridges threads and coroutines when you must mix them
 - **aiohttp** is the standard choice for async HTTP client and server work
 - **ØMQ** makes multi-socket async code clean — one coroutine per socket, no polling
-- **asyncpg** provides the fastest async PostgreSQL access; combine with `LISTEN/NOTIFY` for reactive cache invalidation
+- **asyncpg** provides async PostgreSQL access; `LISTEN/NOTIFY` can support cache invalidation when missed notifications are handled
 - Third-party async libraries abstract away the raw event loop, letting you focus on application logic

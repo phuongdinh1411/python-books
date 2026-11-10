@@ -14,7 +14,7 @@ Functions are Python's primary building block for organizing code. Python gives 
 ### Item 20: Prefer Raising Exceptions to Returning `None`
 - Returning `None` to signal error is dangerous because `None` is falsy — just like `0`, `""`, `[]`
   ```python
-  # Bug trap: result of 0/0 is None, but so is 0/5 == 0
+  # Bug trap: an API returning None for failure is easy to confuse with valid 0.0
   result = divide(0, 5)
   if not result:  # wrongly triggers for valid result of 0.0
       print("error")
@@ -26,7 +26,7 @@ Functions are Python's primary building block for organizing code. Python gives 
           raise ValueError("Cannot divide by zero")
       return a / b
   ```
-- Callers must explicitly handle exceptions — they can't silently ignore them
+- Exceptions propagate if not handled; callers can catch specific errors at a deliberate recovery boundary
 
 ### Item 21: Know How Closures Interact with Variable Scope
 - Inner functions can *read* variables from enclosing scopes (closure)
@@ -52,10 +52,10 @@ Functions are Python's primary building block for organizing code. Python gives 
   ```
 - Use when a function legitimately takes a variable number of same-type arguments
 - **Caution**: passing a generator to `*args` will exhaust it into memory immediately — problematic for large inputs
-- Don't add new positional parameters after `*args` — it breaks callers silently; use keyword-only instead
+- Don't insert a new positional parameter *before* existing `*args` — it may silently consume an argument previously captured there. Parameters *after* `*args` are already keyword-only.
 
 ### Item 23: Provide Optional Behavior with Keyword Arguments
-- All positional arguments can be passed by keyword: `divide(a=10, b=2)`
+- Ordinary positional-or-keyword parameters can be passed by keyword: `divide(a=10, b=2)`. Positional-only parameters (see Item 25) cannot.
 - Keyword arguments provide self-documenting call sites
 - Use default values to make parameters optional:
   ```python
@@ -88,7 +88,7 @@ Functions are Python's primary building block for organizing code. Python gives 
   ```
 - **Positional-only** (before `/`, Python 3.8+): callers *must not* use keyword syntax
   ```python
-  def safe_division(number, divisor, /, ...):
+  def safe_division(number, divisor, /, *, ignore_overflow=False):
       ...
   ```
 - Positional-only lets you rename parameters without breaking callers

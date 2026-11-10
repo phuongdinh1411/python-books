@@ -22,9 +22,12 @@ def load_config(raw: dict) -> Config:
 ```
 This grows unwieldy fast.
 
+## Version Note
+The book-era examples use **Pydantic v1**. The examples below use **v2**: `field_validator`, `model_validate`, and `model_dump` replace common v1 APIs. For environment settings use the separate `pydantic-settings` package. Choose strict validation when coercion would hide invalid input; neither annotations nor a model prevent every later invalid mutation by default.
+
 ## pydantic Models
 ```python
-from pydantic import BaseModel, validator
+from pydantic import BaseModel
 
 class ServerConfig(BaseModel):
     host: str
@@ -39,15 +42,16 @@ class ServerConfig(BaseModel):
 - Invalid data raises a clear `ValidationError` with field-level detail
 
 ## Validators
-Custom validation logic via `@validator` (v1) or `@field_validator` (v2):
+Custom validation logic via `@field_validator` (v2; v1 used `@validator`):
 ```python
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 class ServerConfig(BaseModel):
     port: int
 
-    @validator("port")
-    def port_must_be_valid(cls, v):
+    @field_validator("port")
+    @classmethod
+    def port_must_be_valid(cls, v: int) -> int:
         if not (1 <= v <= 65535):
             raise ValueError("Port must be between 1 and 65535")
         return v
@@ -62,7 +66,7 @@ pydantic does both:
   (`"42"` → `42` for an `int` field; `"true"` → `True` for a `bool` field)
 
 This is sometimes called the **"parse, don't validate"** philosophy:
-> Instead of checking if data is valid and then using it, *parse* it into a valid type up front. After parsing, the type system guarantees validity everywhere downstream.
+> Parse incoming data into a type with enforced boundary constraints. Internal code can then rely on those constraints **as long as later mutation and construction paths preserve them**; the static type system alone does not guarantee value validity.
 
 ## When to Use pydantic
 - Configuration loading from files, environment variables

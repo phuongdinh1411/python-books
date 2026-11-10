@@ -22,18 +22,23 @@ A foundational composability principle from Eric Raymond:
 Keep mechanisms separate from policies:
 ```python
 # Mechanism: how to retry (reusable)
-def retry(fn, max_attempts: int, delay: float):
+import time
+
+def retry(fn, max_attempts: int, delay: float, *, retry_on: tuple[type[Exception], ...]):
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be positive")
     for attempt in range(max_attempts):
         try:
             return fn()
-        except Exception:
+        except retry_on:
+            if attempt == max_attempts - 1:
+                raise  # preserve the last error
             time.sleep(delay)
-    raise MaxRetriesExceeded()
 
-# Policy: what to retry (specific)
-retry(fetch_menu_data, max_attempts=3, delay=1.0)
+# Policy: what to retry, and which failures are transient
+retry(fetch_menu_data, max_attempts=3, delay=1.0, retry_on=(TimeoutError,))
 ```
-The `retry` mechanism knows nothing about menus; it works for anything. This makes it composable.
+The retry mechanism knows nothing about menus or which failures are transient; callers supply that policy. Retry only idempotent operations (or use idempotency keys). Production code may also need backoff, jitter, and a deadline.
 
 ## Composing on a Smaller Scale
 

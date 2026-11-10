@@ -26,6 +26,7 @@ Possible mutants:
 If your tests don't cover `age == 0` or `age == 150`, those mutants survive.
 
 ## Mutation Testing with mutmut
+**Version note:** the reporting and coverage flags below describe older mutmut workflows. Check your installed version's `mutmut --help` and configuration documentation before using `results`, `html`, `--use-coverage`, or `--paths-to-mutate`; newer versions organize these differently.
 ```bash
 pip install mutmut
 mutmut run
@@ -40,7 +41,9 @@ mutmut results
 ```
 - **Killed**: tests caught the mutation ✅
 - **Survived**: tests missed it — a test gap ❌
-- **Suspicious**: tests produced inconsistent results (flaky tests lurking)
+- **Suspicious**: interpretation depends on the mutmut version (often unusually slow runs); inspect details rather than assuming a flaky test
+
+A survivor is not automatically a missing test: some mutants are behaviorally equivalent to the original for valid inputs. Distinguish equivalent mutants from meaningful gaps before adding assertions.
 
 ### Fixing Surviving Mutants
 For each survivor, inspect it:

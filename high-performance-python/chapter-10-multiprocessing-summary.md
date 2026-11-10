@@ -35,8 +35,10 @@ Throwing 400M random darts; testing with 1, 2, 4, 8, 16 workers:
 ```python
 from multiprocessing import Pool
 
-pool = Pool(processes=4)
-results = pool.map(worker_function, list_of_args)
+# worker_function must be defined at module scope.
+if __name__ == "__main__":
+    with Pool(processes=4) as pool:
+        results = pool.map(worker_function, list_of_args)
 ```
 
 - `pool.map` distributes work across processes and collects results
@@ -80,7 +82,8 @@ def expensive_fn(arg1, arg2):
 ## Random Numbers in Parallel
 
 - Python's `random` module: automatically re-seeded in each forked process by `multiprocessing`
-- NumPy's random: **must manually set seed per worker** — if not, all processes generate **identical sequences**!
+- NumPy RNGs inherited under `fork` can produce duplicate streams. Use `numpy.random.SeedSequence(seed).spawn(n_workers)` to derive independent, reproducible worker streams rather than giving every worker the same seed.
+- Start methods vary: macOS uses `spawn` by default; Python 3.14 uses `forkserver` by default on supported POSIX systems. Do not assume workers inherit initialized globals; pass shared buffers through an initializer or attach to named `multiprocessing.shared_memory` blocks.
 - For critical applications (medical/financial), research the statistical quality of parallel random streams
 
 ---
@@ -102,7 +105,7 @@ NumPy releases the GIL for many operations → better hyperthread utilization (c
 
 ## Sharing NumPy Arrays Between Processes
 
-By default, forked processes each get a **copy** of numpy arrays. For large arrays (e.g., 32 GB), copying is prohibitive.
+By default, `fork` initially shares inherited memory through **copy-on-write**; writes can create private copies. Under `spawn`/`forkserver`, passing arrays as task arguments generally serializes them unless explicit shared memory is used. Repeated transfer of a large array can dominate runtime.
 
 ### Solution: `multiprocessing.Array` + `numpy.frombuffer`
 
@@ -121,7 +124,7 @@ pool.map(worker_fn, range(SIZE_A))
 ```
 
 - `lock=False`: explicit about bypassing the built-in lock (we manage access ourselves)
-- All workers see the **same bytes** — verified using `id()` and `pmap`
+- Workers access the same explicitly shared buffer; matching `id()` values across processes do **not** prove sharing because each process has its own address space
 - Ideal for read-heavy workloads or workloads with disjoint write regions per worker
 - Be careful with concurrent writes — use locks if needed
 
@@ -191,6 +194,6 @@ For prime verification problems where multiple workers can find an answer (e.g.,
 4. NumPy releases the GIL → better hyperthread utilization
 5. Joblib is a drop-in improvement over `multiprocessing` with caching
 6. Sharing large NumPy arrays: use `multiprocessing.Array` + `frombuffer` to avoid copies
-7. Always set NumPy random seeds explicitly in worker processes
+7. Create independent NumPy random streams per worker; record seeds and worker assignment for reproducibility
 8. IPC is powerful but complex — prefer simpler patterns unless forced otherwise
 9. Running out of RAM from forked processes defeats all parallelism gains

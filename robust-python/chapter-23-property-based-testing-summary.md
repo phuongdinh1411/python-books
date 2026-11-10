@@ -23,8 +23,8 @@ def test_meal_recommendation_under_target(target_calories: int):
     assert meal.total_calories < target_calories
 ```
 - Hypothesis generates hundreds of random integers within the range
-- If it finds a failing input, it **shrinks** it to the smallest possible failing case
-- Failing inputs are saved to a database and always replayed (regression tracking)
+- If it finds a failing input, it **shrinks** toward a simpler failing case (not a proof of the globally smallest input)
+- Saved failures can be replayed through the example database; keep critical regressions as explicit examples/tests too
 
 ## The Magic of Hypothesis
 
@@ -58,7 +58,7 @@ Strategies are generators for test data:
 |---|---|
 | `st.integers(min_value=0)` | Non-negative integers |
 | `st.text()` | Unicode strings |
-| `st.floats(allow_nan=False)` | Finite floats |
+| `st.floats(allow_nan=False, allow_infinity=False)` | Finite floats |
 | `st.lists(st.integers(), min_size=1)` | Non-empty integer lists |
 | `st.one_of(st.integers(), st.text())` | Either an int or a string |
 | `st.builds(MyClass, field=st.integers())` | Instances of MyClass |
@@ -66,16 +66,20 @@ Strategies are generators for test data:
 
 Compose strategies for complex inputs:
 ```python
-@given(st.lists(st.floats(min_value=0, allow_nan=False), min_size=1))
-def test_average_is_within_bounds(values: list[float]):
+@given(st.lists(st.integers(min_value=0, max_value=1_000_000), min_size=1, max_size=100))
+def test_average_is_within_bounds(values: list[int]):
     result = average(values)
     assert min(values) <= result <= max(values)
 ```
 
+This bounded-integer strategy keeps a simple float-based average away from infinity and overflow. If arbitrary floats are part of the API, test NaN, infinity, overflow, and rounding behavior separately with an explicit numerical contract.
+
 ### Generating Algorithms (Stateful Testing)
 Hypothesis `RuleBasedStateMachine` tests stateful systems:
 ```python
-from hypothesis.stateful import RuleBasedStateMachine, rule, initialize
+from collections import deque
+from hypothesis import strategies as st
+from hypothesis.stateful import RuleBasedStateMachine, rule, initialize, precondition
 
 class QueueMachine(RuleBasedStateMachine):
     @initialize()
@@ -88,10 +92,12 @@ class QueueMachine(RuleBasedStateMachine):
         self.queue.append(value)
         self.model.append(value)
 
+    @precondition(lambda self: bool(self.model))
     @rule()
     def dequeue(self):
-        assume(len(self.queue) > 0)
         assert self.queue.popleft() == self.model.pop(0)
+
+TestQueue = QueueMachine.TestCase  # enables unittest/pytest discovery
 ```
 Hypothesis generates sequences of operations and finds sequences that break invariants.
 

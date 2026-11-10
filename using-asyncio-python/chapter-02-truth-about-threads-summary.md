@@ -1,7 +1,7 @@
 # Chapter 2 – The Truth About Threads
 
 ## Core Idea
-Threading is neither terrible nor perfect. It's a valuable tool — especially for CPU-bound parallelism — but carries real costs and hidden dangers for I/O-bound network programming. Understanding both its benefits and drawbacks is essential for choosing between threads and Asyncio.
+Threading is valuable for blocking I/O and shared-memory numerical work implemented in native libraries that release the GIL. On GIL-enabled CPython, threads do not usually accelerate CPU-bound Python bytecode. Understanding these limits and the costs of preemptive scheduling is essential for choosing between threads, processes, and asyncio.
 
 ---
 
@@ -36,7 +36,7 @@ with Executor(max_workers=10) as exe:
 | **Hard to reason about** | Bugs from preemptive context switching can be nearly impossible to reproduce |
 | **Resource-intensive** | Each thread pre-allocates ~8 MB of virtual memory for its stack (10,000 threads → ~80 GB virtual memory) |
 | **Throughput limit** | At very high concurrency (>5,000 threads), context-switching costs hurt throughput |
-| **Inflexible scheduling** | The OS switches threads even when they're waiting idly, wasting CPU cycles |
+| **Inflexible scheduling** | Scheduling is OS-controlled; many runnable threads can add context-switch overhead. Threads blocked on I/O normally sleep rather than repeatedly consuming CPU. |
 
 ---
 
@@ -69,12 +69,12 @@ If the OS switches threads between steps 1 and 3, one bot's update **overwrites*
 
 Instead of adding locks everywhere, use a **single event loop (LoopBot)**: one thread doing all the work, switching between tasks at predictable `await` points.
 
-> In async programs, **context switches are explicit** — they happen only at `await` keywords. No lock needed, because there's only one thread modifying state at a time.
+> In async programs, task switching occurs at suspension points such as `await`. A short read-modify-write sequence with no suspension is not interleaved by other tasks on the same loop. An invariant spanning an `await` can still need `asyncio.Lock`; thread and external-resource races also remain.
 
 ---
 
 ## Key Takeaways
-- Threading is appropriate for CPU-bound parallel work; Asyncio is better for I/O-bound concurrent work
+- Threads suit blocking I/O and GIL-releasing native CPU work; processes suit CPU-bound Python on GIL-enabled CPython. Asyncio suits high-concurrency I/O with async libraries.
 - Race conditions in threaded code are the **hardest bugs to fix** — they're unpredictable and non-reproducible
 - The best threading practice: use `ThreadPoolExecutor`, pass all data through `submit()`, avoid globals
 - Asyncio solves the I/O-bound concurrency problem by making context-switch points **visible** with `await`

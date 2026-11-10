@@ -5,13 +5,13 @@
 
 ## Core Concept: Hash Tables
 
-Dictionaries and sets use **open-address hash tables** to achieve **O(1)** lookups, insertions, and deletions — regardless of size. Sets are essentially dictionaries without values (just unique keys).
+Dictionaries and sets use hash tables for **average O(1)** lookup, insertion, and deletion, assuming well-distributed hashes and bounded hash/equality cost. Collisions can degrade operations to O(n). Sets store unique elements without associated values; their layout differs from dictionaries.
 
 | Data Structure | Lookup | Insert | Use Case |
 |---|---|---|---|
 | List (unsorted) | O(n) | O(1) amortized | Ordered, index-based data |
 | List (sorted) + bisect | O(log n) | O(n) | Searchable ordered data |
-| Dict / Set | **O(1)** | **O(1) amortized** | Key-indexed or unique data |
+| Dict / Set | **O(1) average** | **O(1) amortized average** | Key-indexed or unique data |
 
 **Example**: finding unique first names in a phone book — set approach was **560× faster** (O(n) vs O(n log n)) for 10,000 entries, and **4,300× faster** for 100,000 entries.
 
@@ -39,11 +39,10 @@ Same process: hash the key → check bucket → if key matches, return value; if
 Cannot simply write NULL (would break collision probing). Instead, writes a **sentinel value** marking the slot as "was occupied." Actual cleanup happens on resize.
 
 ### Resizing
-- Dictionary is always kept **≤ 2/3 full** (sets: ≤ 3/5 full)
-- Always sized as a **power of two** (minimum size: 8)
-- When threshold exceeded, resize to 3× current size → round up to next power of two
-- Resizing copies all existing entries into the new table (expensive but amortized O(1) per insert)
-- Resizing can also shrink the table — triggered on the next **insert** after many deletions
+- CPython keeps spare hash-table capacity to limit probing; dict and set load policies differ
+- Table sizes, growth formulas, and compaction behavior are implementation details that change between versions
+- Rebuilding rehashes existing entries: expensive for that insertion, but average insertion cost is amortized O(1)
+- Deleting entries usually does not immediately shrink the allocated table; avoid assuming a particular insertion will reclaim memory
 
 ---
 
@@ -52,23 +51,24 @@ Cannot simply write NULL (would break collision probing). Instead, writes a **se
 A good hash function distributes keys uniformly across buckets (**high entropy**). Poor hash functions lead to collisions → O(n) degradation.
 
 ### Built-in Types
-- **Integers**: hash = the integer itself (ideal for infinite table)
-- **Strings/Tuples**: hash based on all contents (using SipHash 1-3)
-- **Lists**: not hashable (mutable → hash could change)
-- **User classes**: default hash = memory address (`id(obj)`)
+- **Integers**: small integer hashes usually equal the value; large integers are reduced modulo an implementation-specific modulus, and `hash(-1) == -2`
+- **Strings/bytes**: modern CPython uses randomized hashing (commonly SipHash); tuple hashing combines the element hashes using a different algorithm
+- **Lists**: not hashable; mutable contents do not support a stable value hash
+- **User classes**: default equality and hashing are identity-based; the hash is not simply `id(obj)`
 
 ### Custom Hash Functions
 If two objects should be equal (e.g., two `Point(1,1)` instances), define `__hash__` and `__eq__`:
 
 ```python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
 class Point:
-    def __hash__(self):
-        return hash((self.x, self.y))
-    def __eq__(self, other):
-        return self.x == other.x and self.y == other.y
+    x: int
+    y: int
 ```
 
-Without this, two `Point(1,1)` objects would be treated as different keys in a set.
+Without value equality, two `Point(1,1)` objects would be treated as different keys. Equal objects must have equal hashes, and hash-relevant state must stay stable while used as a key. This frozen dataclass generates consistent equality and hashing for its integer fields.
 
 ### Entropy Formula
 ```
@@ -90,15 +90,15 @@ For a set of 676 two-letter keys:
 
 ## Memory Layout
 
-- Minimum dictionary/set size: **8 buckets**
-- Always at least **1/3 empty** (for sets, 2/5 empty)
-- Most of the memory in a hash table is empty — this is by design for performance
+- Dicts and sets use different layouts and reserve unused capacity to support fast probing
+- Exact bucket counts, load thresholds, and per-entry overhead depend on CPython version/build
+- Measure the actual structure rather than assuming most allocated memory is always empty
 
 ---
 
 ## Key Takeaways
 
-1. Dicts and sets give O(1) lookup at the cost of higher memory usage and hash function overhead
+1. Dicts and sets give average O(1) lookup at the cost of memory and hash/equality overhead
 2. Hashing quality is critical — a bad `__hash__` can reduce a dict to O(n) performance
 3. Always define both `__hash__` and `__eq__` together when creating hashable custom objects
 4. Deletion uses sentinels; actual memory is reclaimed on resize

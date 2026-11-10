@@ -93,7 +93,7 @@ For production systems, use a message broker — handles node failures, backlogs
 - Producer puts jobs on a queue
 - Workers pull and process when ready
 - Handles imbalance between production and consumption rates
-- Messages survive consumer crashes (delivery guarantees)
+- Messages survive consumer crashes only with appropriate broker persistence, acknowledgement, and redelivery configuration; consumers must handle duplicates
 
 Key questions when choosing a queue:
 - What happens when the queue fills up (memory exhaustion)?
@@ -129,8 +129,8 @@ Key questions:
 Docker solves the **reproducible environment** problem, which is especially painful in clusters.
 
 ### Performance
-- **No CPU/memory overhead** on Linux — Docker uses OS-level virtualization (cgroups), not hardware virtualization
-- On macOS/Windows: Docker runs Linux in a hardware VM (VirtualBox) → some overhead
+- **Near-native compute performance** on Linux for many workloads; cgroup limits, storage, networking, and contention can still affect CPU/memory performance
+- On macOS/Windows, Linux containers normally run inside a VM; performance depends on the runtime and host integration
 - NumPy diffusion benchmark: **host = 0.859 s vs. Docker = 0.842 s** (no meaningful difference)
 
 ### Performance Gotchas

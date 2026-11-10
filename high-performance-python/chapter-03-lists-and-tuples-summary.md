@@ -35,8 +35,8 @@ Python's `bisect` standard library provides:
 |---|---|---|
 | Mutability | Mutable (resizable) | Immutable (fixed) |
 | Memory | Extra overhead for resize headroom | Exact size only |
-| Creation speed | ~78 ns | ~9.5 ns (**7.6× faster**) |
-| Caching | Not cached | Cached by Python runtime |
+| Creation speed | Depends on construction and interpreter | Often cheaper for fixed records; literal benchmarks may reuse constants |
+| Allocation reuse | Implementation-dependent | Implementation-dependent; some CPython versions use tuple freelists |
 | Use case | Growing/changing collections | Fixed, multi-property records |
 
 ---
@@ -72,10 +72,10 @@ Tuples are immutable — they **cannot** be resized or modified after creation. 
 - Slightly smaller base overhead than lists
 - Savings add up significantly when holding millions of tuples
 
-### 2. Python Runtime Caching (Freelist)
-- For sizes 0–20, Python **caches up to 2,000 tuples of each size** in a freelist
-- Creating a new tuple of a cached size avoids talking to the OS kernel
-- Instantiation is **7.6× faster** than lists as a result
+### 2. Allocation Reuse (Implementation Detail)
+- Some CPython versions reuse storage for small, freed tuples through freelists
+- This is storage reuse, not a cache of tuple values; capacities and behavior vary by version/build
+- Literal-tuple timings may measure reuse of a compiled constant rather than creation. Benchmark the actual construction pattern before claiming a speedup.
 
 ### When to Use Each
 - **Tuple**: phone number parts, polynomial coefficients, a person's birthday & birthplace, a single game's result — static, multi-field records
@@ -88,5 +88,5 @@ Tuples are immutable — they **cannot** be resized or modified after creation. 
 1. O(1) lookups are possible only when the index is known; otherwise search algorithms are needed
 2. Sorting + binary search (`bisect`) is the efficient middle ground between O(n) linear search and O(1) dict lookups
 3. Lists overallocate memory to support cheap appends — be mindful with many small lists
-4. Tuples are lighter, faster to create, and cached by the runtime — prefer them for immutable data
+4. Tuples usually have less container overhead and express fixed structure; referenced mutable objects can still change. Choose by semantics, then measure memory and construction cost.
 5. Both support mixed types, but mixed types sacrifice potential optimizations (see numpy in Ch. 6)

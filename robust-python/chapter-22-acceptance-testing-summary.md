@@ -66,13 +66,17 @@ behave
 ## Additional behave Features
 
 ### Parameterized Steps
+Placeholders and `Examples` belong to a `Scenario Outline`:
 ```gherkin
-Given the customer's calorie target is <calories>
+Scenario Outline: Meal calorie limit
+  Given the customer's calorie target is <calories>
+  When the recommendation engine runs
+  Then the total calories should be less than <calories>
 
-Examples:
-  | calories |
-  | 800      |
-  | 1200     |
+  Examples:
+    | calories |
+    | 800      |
+    | 1200     |
 ```
 
 ### Table-Driven Requirements
@@ -84,7 +88,7 @@ Given the following menu items:
 ```
 
 ### Step Matching
-behave supports regex in step decorators for flexible parameter capture:
+behave's default `parse` matcher supports typed placeholders; regex matching requires explicitly selecting the `re` matcher and regex syntax:
 ```python
 @then("the total calories should be less than {target:d}")
 def step_calories_under_target(context, target):
@@ -106,7 +110,8 @@ behave --tags=@integration --tags=~@slow
 ### Report Generation
 ```bash
 behave --format json -o results.json
-behave --format html -o report.html
+# HTML output requires installing and configuring a third-party formatter;
+# "html" is not a built-in behave formatter.
 ```
 
 ## Closing Thoughts

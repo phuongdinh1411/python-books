@@ -54,7 +54,7 @@
               result.append(line)
       return result
   ```
-- A generator yields one item at a time — constant memory regardless of input size:
+- A generator yields one item at a time — this file-reading example avoids retaining all lines:
   ```python
   def all_lines(path):
       with open(path) as f:
@@ -84,7 +84,7 @@
 ### Item 32: Consider Generator Expressions for Large List Comprehensions
 - A generator expression is a comprehension inside `()` — lazy, no list created:
   ```python
-  it = (x**2 for x in range(1_000_000))  # no memory allocated yet
+  it = (x**2 for x in range(1_000_000))  # allocates a generator, not a million-item list
   ```
 - Chain generator expressions to compose pipelines with zero intermediate lists:
   ```python
@@ -98,7 +98,7 @@
       for it in iterables:
           yield from it  # instead of: for item in it: yield item
   ```
-- Cleaner, faster, and the inner generator runs at C speed
+- Cleaner delegation; it also forwards `send`, `throw`, and return values. The sub-generator still executes its Python code — `yield from` does not compile it to C.
 - Use whenever composing generator pipelines
 
 ### Item 34: Avoid Injecting Data into Generators with `send`

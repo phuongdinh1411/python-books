@@ -34,10 +34,10 @@ This chapter covers three DataFrame libraries for tabular data:
 The chapter benchmarks several ways to apply an Ordinary Least Squares (OLS) calculation to 100,000 rows of a DataFrame.
 
 ### Which OLS Implementation Is Faster?
-| Method | Time per call |
+| Method | Illustrative comparison |
 |---|---|
-| `sklearn.LinearRegression.fit` | 0.515 µs |
-| `numpy.linalg.lstsq` (direct) | **0.072 µs (7× faster)** |
+| `sklearn.LinearRegression.fit` | Includes validation and preprocessing overhead |
+| `numpy.linalg.lstsq` (direct) | Reported as faster in this case study; absolute timings/units need source verification |
 
 Why? `scikit-learn` spends **85%** of its execution on:
 1. `_validate_data` — checks for NaN, Inf, wrong shapes, etc.
@@ -54,22 +54,22 @@ Why? `scikit-learn` spends **85%** of its execution on:
 | `df.apply(func, axis=1)` | 3.9 s |
 | `df.apply(func, axis=1, raw=True)` | **3.1 s** |
 | `df.apply(func, axis=1, raw=True, engine="numba")` | **0.40 s** |
-| `df.apply(func, axis=1, raw=True, engine="numba", parallel=True)` | **0.13 s** |
+| `df.apply(func, axis=1, raw=True, engine="numba", engine_kwargs={"parallel": True})` | **0.13 s** |
 
 - `raw=True` avoids creating an intermediate `Series` object per row (passes raw NumPy array directly)
 - `engine="numba"` JIT-compiles the function — requires NumPy arrays, not PyArrow
-- `parallel=True` spreads across CPU cores via Numba's auto-parallelizer
+- `engine_kwargs={"parallel": True}` requests Numba parallel execution; support and gains depend on the pandas/Numba versions and function
 - **Total speedup from worst to best: ~56× (7.3s → 0.13s)**
 
 ### Anti-Pattern: Iterative Concatenation
 ```python
 # BAD — each concat creates a new full copy of the growing Series
-for ...:
-    results = pd.concat((results, pd.Series([m])))   # 14 seconds!
+for m in calculated_slopes:
+    results = pd.concat((results, pd.Series([m])))   # repeated allocation/copy
 
 # GOOD — build a list, construct once at the end
 ms = []
-for ...:
+for m in calculated_slopes:
     ms.append(m)
 results = pd.Series(ms)                              # 7 seconds
 ```
@@ -94,7 +94,7 @@ df['col'].apply(find_9)                                   # 52 ms
 - Drop unused columns to reduce memory bloat
 - Convert low-cardinality string columns to `category` dtype for faster `groupby`/`value_counts`
 - Downcast numeric types (`float64` → `float16`, `int64` → `int8`) to save RAM when full range isn't needed
-- Never use `inplace=True` — it's being deprecated
+- Do not assume `inplace=True` is faster or avoids copying; prefer explicit assignment where clearer and check deprecations for the particular method
 - **Always write unit tests** comparing optimized vs. safe implementations
 
 ---
@@ -168,10 +168,10 @@ A newer, rapidly evolving competitor to Pandas with clear advantages:
 
 ## Key Takeaways
 
-1. `apply` with `raw=True` + Numba parallelized is the fastest Pandas row-wise approach (~56× faster than naive `iloc`)
+1. Prefer column-level expressions/vectorization first. For compatible row-wise functions, `raw=True` with Numba can help; the ~56× result belongs to this benchmark, not every `apply`.
 2. **Never iteratively concatenate** Series/DataFrames — always build lists and construct once
 3. PyArrow backend excels for string columns; NumPy is fine for numerics
 4. Dask enables multi-core and cluster scaling with minimal code changes; dask-expr adds automatic optimization
 5. Swifter is a one-line easy win worth trying before manually tuning Dask
-6. Polars is 2–10× faster than Pandas for equivalent code and is worth adopting for new projects
+6. Polars can outperform Pandas, especially with lazy query optimization; benchmark equivalent semantics and account for migration/ecosystem costs
 7. Safety checks in libraries like scikit-learn have a real performance cost — know when you can safely bypass them

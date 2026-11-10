@@ -4,9 +4,11 @@
 **Concurrency** = multiple tasks making progress (possibly interleaved on one core). **Parallelism** = multiple tasks running simultaneously on multiple cores. Python's GIL limits true parallelism for CPU-bound work in threads, but provides excellent models for I/O concurrency. Choosing the right tool depends on whether your bottleneck is I/O or CPU.
 
 ## The Python GIL
+This advice assumes **GIL-enabled CPython**. Optional free-threaded builds exist from Python 3.13; native libraries can also release the GIL. Check your interpreter and dependencies before choosing a model.
+
 - CPython's Global Interpreter Lock (GIL) allows only one thread to execute Python bytecode at a time
-- Threads are excellent for **I/O-bound** work (the GIL is released during I/O)
-- Threads provide **no speedup** for CPU-bound work — use multiprocessing or C extensions instead
+- Threads are excellent for **I/O-bound** work (blocking I/O commonly releases the GIL)
+- Threads generally provide **no CPU parallel speedup for Python bytecode** on these builds — use processes or GIL-releasing native code
 
 ## Items Summary
 
@@ -31,7 +33,7 @@
   for t in threads: t.start()
   for t in threads: t.join()
   ```
-- **Never use threads expecting CPU speedup** — you won't get it
+- Do not expect CPU speedup for pure Python on GIL-enabled CPython; native GIL-releasing work and free-threaded builds are exceptions
 
 ### Item 54: Use `Lock` to Prevent Data Races in Threads
 - Shared mutable state across threads causes data races even in Python
@@ -124,7 +126,7 @@
 - The event loop is single-threaded — any blocking call blocks **all** coroutines
 - Never call blocking I/O, CPU-heavy code, or `time.sleep()` in `async` functions
 - Use `await asyncio.sleep(n)` instead of `time.sleep(n)`
-- Offload CPU work: `await loop.run_in_executor(None, cpu_heavy_function)`
+- Offload CPU-bound Python work with an explicitly supplied `ProcessPoolExecutor`: `await loop.run_in_executor(process_pool, cpu_heavy_function)`. Passing `None` chooses a thread pool — useful for blocking I/O, not generally for Python CPU parallelism.
 
 ### Item 64: Consider `concurrent.futures` for True Parallelism
 - `ProcessPoolExecutor` bypasses the GIL by running tasks in separate processes:
@@ -135,7 +137,8 @@
       results = list(executor.map(cpu_heavy, items))
   ```
 - Use for CPU-bound work (image processing, number crunching, ML inference)
-- Overhead: process startup + pickling data — only worthwhile for tasks > ~100ms
+- Overhead: process startup + pickling data — benchmark task size, batching, and data transfer rather than using a fixed time threshold
+- Define workers at module scope and launch the pool under `if __name__ == "__main__":` in scripts so spawn/forkserver-based execution can import safely
 - `ThreadPoolExecutor` for I/O-bound; `ProcessPoolExecutor` for CPU-bound
 
 ## Concurrency Decision Guide

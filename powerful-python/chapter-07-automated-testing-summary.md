@@ -41,7 +41,7 @@ class TestAngle(unittest.TestCase):
 | `assertIn(item, container)` | Item is in container |
 | `assertIsInstance(obj, cls)` | Object is an instance |
 
-Always put **expected value first** in `assertEqual` — stay consistent across your codebase.
+`unittest` names these parameters `first` and `second`; either expected/actual convention works for equality. Choose one consistently rather than treating expected-first as a framework requirement.
 
 ### `setUp` and `tearDown` — Test Fixtures
 - `setUp()` runs **before each test method** — creates a fresh, consistent test environment
@@ -61,7 +61,7 @@ class TestState(unittest.TestCase):
         reloaded = State(self.state_file_path)
         self.assertEqual(21, reloaded.data["foo"])
 ```
-- `tearDown` runs even if an assertion fails — good for guaranteed cleanup
+- `tearDown` runs after the test when `setUp` succeeded, even if an assertion fails. Register `addCleanup` immediately after acquisition when cleanup must also run if `setUp` later fails.
 - Spelling matters: `setUp` / `tearDown`, not `setup` / `teardown`
 
 ### Asserting Exceptions
@@ -97,7 +97,7 @@ def test_whitespace(self):
 
 ## Key Takeaways
 - Always run the test first to **confirm it fails** — this validates the test itself
-- `setUp` / `tearDown` create a clean sandbox per test; `tearDown` always runs
+- `setUp` / `tearDown` isolate tests; use `addCleanup` for resources acquired during setup
 - Use `assertRaises` inside a `with` block to test exception-raising behavior
 - Use `subTest` to test multiple inputs without stopping at the first failure
 - TDD's greatest benefit is **cognitive** — it helps you stay focused and builds correct code incrementally

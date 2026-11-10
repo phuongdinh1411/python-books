@@ -46,7 +46,7 @@ class Point:
     x: float
     y: float
 ```
-- Fields cannot be modified after creation → hashable, safe to use as dict keys or in sets
+- Frozen dataclasses block ordinary field reassignment, but are **not deeply immutable**. Generated hashing works only when hash-participating fields are hashable; a frozen dataclass containing a list is not usable as a dict key.
 - Raises `FrozenInstanceError` on attempted mutation
 - Good for value objects (coordinates, money amounts, identifiers)
 
@@ -56,7 +56,7 @@ class Point:
 | | Dict | Data Class |
 |---|---|---|
 | Key access | `d["name"]` (runtime error on typo) | `d.name` (typechecker catches typos) |
-| Type safety | No | Yes |
+| Type safety | Available with `TypedDict` or precise annotations | Available through annotations; no automatic runtime validation |
 | Readability | Low | High |
 | Performance | Slightly faster | Negligible overhead |
 
@@ -70,7 +70,7 @@ class Point:
 | Mutable | No | Yes (unless `frozen=True`) |
 | Inheritance | Awkward | Natural |
 | Default values | Verbose | Clean |
-| Methods | Limited | Full class methods |
+| Methods | Possible by subclassing or using `typing.NamedTuple` | Full class methods |
 
 Use `namedtuple` only when you need tuple unpacking or tuple compatibility. Prefer `dataclass` otherwise.
 

@@ -1,7 +1,7 @@
 # Chapter 10 – User-Defined Types: Classes
 
 ## Core Idea
-Classes are the most powerful user-defined type, but also the most misused. Their defining feature over data classes and dicts is the ability to enforce **invariants** — rules about data that must always hold true. Use classes when your data has behavior that must protect its own consistency.
+Classes group state and behavior and can protect **invariants** — rules about data that must always hold for valid objects. A dataclass is also a full Python class: it can define methods, properties, and validation such as `__post_init__`. Choose an ordinary class when explicit state transitions and controlled initialization matter more than generated field-based behavior.
 
 ## Class Anatomy
 A class groups data (attributes) and behavior (methods). Unlike a data class, a full class is used when:
@@ -49,7 +49,7 @@ Use name mangling and properties to control access:
 ```python
 class Temperature:
     def __init__(self, celsius: float):
-        self._celsius = celsius  # "private by convention"
+        self.celsius = celsius  # use the setter so construction validates too
 
     @property
     def celsius(self) -> float:

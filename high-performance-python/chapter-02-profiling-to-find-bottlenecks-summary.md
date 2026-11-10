@@ -20,14 +20,17 @@ The chapter uses a **Julia set** calculation as its running example — a CPU-bo
 ## Profiling Tools (from coarse to fine)
 
 ### 1. `print` + Decorator Timing
-Simplest approach — wrap a function with `time.time()` before and after.
+Simplest approach — wrap a function with the monotonic, high-resolution `time.perf_counter()` before and after.
 ```python
+import time
+from functools import wraps
+
 def timefn(fn):
     @wraps(fn)
     def measure_time(*args, **kwargs):
-        t1 = time.time()
+        t1 = time.perf_counter()
         result = fn(*args, **kwargs)
-        print(f"{fn.__name__} took {time.time()-t1:.2f}s")
+        print(f"{fn.__name__} took {time.perf_counter()-t1:.2f}s")
         return result
     return measure_time
 ```
@@ -36,7 +39,8 @@ Fast to add, but clutters output. Use the `timeit` module for micro-benchmarks.
 ### 2. Unix `time` Command
 ```bash
 /usr/bin/time -p python script.py
-/usr/bin/time --verbose python script.py  # includes max RSS, page faults
+/usr/bin/time --verbose python script.py  # GNU/Linux: max RSS, page faults
+/usr/bin/time -l python3 script.py        # macOS/BSD resource statistics
 ```
 Reports `real`, `user`, `sys` times and **Maximum resident set size** (peak RAM). No code changes required.
 
@@ -118,7 +122,7 @@ viztracer script.py && vizviewer results.json
 import dis
 dis.dis(some_function)
 ```
-Shows the stack-based CPython bytecode. More bytecode lines → more overhead.
+Shows stack-based CPython bytecode. Instruction count alone does not predict runtime: instructions do different amounts of work and specialization changes their cost.
 
 Key insight: `fn_terse` (using `sum(range(n))`) runs **2.7× faster** than `fn_expressive` (manual loop) because it calls an optimized C function with only 6 bytecode instructions vs. 17.
 

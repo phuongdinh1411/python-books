@@ -115,8 +115,8 @@ Override these to make your objects work with Python's operators and built-ins.
 - `__repr__()` — used by `repr()` and `!r`; ideally reproducible Python code
 
 **Equality and comparison:**
-- `__eq__()` — `==` (default is identity check; almost always override this)
-- `__lt__`, `__le__`, `__gt__`, `__ge__` — rich comparisons; Python can infer one from the other
+- `__eq__()` — `==`; override when the domain calls for value equality, and keep `__hash__` consistent
+- `__lt__`, `__le__`, `__gt__`, `__ge__` — rich comparisons; Python does not derive every comparison from one method. Use `functools.total_ordering` with `__eq__` and one ordering method, or `@dataclass(order=True)`, to generate the rest.
 
 ---
 

@@ -69,8 +69,8 @@ async def main():
 
 ## Event Loop
 
-- `asyncio.get_running_loop()` — **recommended**, callable only inside a coroutine
-- `asyncio.get_event_loop()` — **discouraged** in modern code; works outside coroutines but confusing
+- `asyncio.get_running_loop()` — **recommended**, available in a coroutine or callback running on the event-loop thread
+- `asyncio.get_event_loop()` — avoid for new application code; behavior outside a running loop varies by Python version and can raise `RuntimeError`
 - From Python 3.7+: use `asyncio.create_task(coro)` instead of `loop.create_task(coro)`
 
 ---
@@ -85,7 +85,8 @@ async def main():
 | Can be cancelled | Yes | Yes |
 
 - **Use `create_task()`**, not `ensure_future()` — `ensure_future()` is a framework-designer utility
-- `asyncio.gather(*tasks)` waits for all tasks concurrently and returns a list of results
+- `asyncio.gather(*tasks)` returns results in input order when all succeed. By default, the first exception propagates immediately; other tasks are not automatically cancelled. Use `return_exceptions=True` to collect failures as results.
+- **Modern addition (Python 3.11+)**: `asyncio.TaskGroup` scopes task lifetime, awaits children, and cancels siblings when a child fails with a non-cancellation exception. Use `asyncio.timeout()` for bounded waits; do not swallow cancellation.
 
 ---
 
@@ -97,8 +98,10 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def web_page(url):
     data = await download_webpage(url)  # can await here
-    yield data
-    await update_stats(url)
+    try:
+        yield data
+    finally:
+        await update_stats(url)  # attempted even if the body raises
 
 async with web_page('google.com') as data:
     process(data)
@@ -154,7 +157,7 @@ result = [await f(x) async for f, x in async_generator()]  # with await
 **The standard pattern:**
 ```python
 async def main():
-    # your app logic
+    pass  # replace with your app logic
 
 try:
     asyncio.run(main())
@@ -182,6 +185,7 @@ except KeyboardInterrupt:
 
 ```python
 import asyncio
+import time
 
 def blocking_io():
     time.sleep(1)  # this would freeze the event loop!
@@ -199,6 +203,6 @@ async def main():
 - `await` marks where the event loop may switch to another coroutine
 - Use `asyncio.run()` as the entry point — it handles loop lifecycle automatically
 - Use `create_task()` to run coroutines concurrently; use `gather()` to wait for multiple
-- Use `run_in_executor()` for any blocking code you can't make async
+- Use `asyncio.to_thread(blocking_fn)` (Python 3.9+) or the default thread executor for blocking I/O. Use an explicitly supplied process pool for CPU-bound Python work on GIL-enabled CPython.
 - Proper shutdown requires cancelling all tasks and waiting for them — `asyncio.run()` does this for you
 - `async with`, `async for`, and async generators bring async support to familiar Python patterns

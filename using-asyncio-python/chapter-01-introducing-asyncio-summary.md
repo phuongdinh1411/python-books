@@ -25,9 +25,8 @@ The book uses a robot restaurant as a mental model:
 
 ## What Problem Is Asyncio Trying to Solve?
 
-**Only two real reasons to use Asyncio over threads:**
-1. **Safer concurrency** — eliminates race conditions from shared memory access by using a single thread
-2. **Massive connection scaling** — can maintain tens of thousands of simultaneous socket connections (WebSockets, MQTT, etc.) where the OS thread limit would be a bottleneck
+1. **More predictable concurrency** — tasks on one event-loop thread do not interleave between suspension points. Shared-state operations spanning an `await` can still race and may need `asyncio.Lock`.
+2. **Massive connection scaling** — can maintain many simultaneous socket connections (WebSockets, MQTT, etc.) without a thread per connection. Actual limits depend on OS settings, memory, and workload.
 
 ---
 
@@ -35,10 +34,10 @@ The book uses a robot restaurant as a mental model:
 
 | Myth | Truth |
 |---|---|
-| "Asyncio makes my code faster" | No — threading is often slightly faster. Asyncio isn't about speed. |
-| "Asyncio replaces threading" | No — threading is still best for CPU-bound tasks with shared memory |
+| "Asyncio makes my code faster" | It can improve throughput over sequential I/O by overlapping waits; it does not inherently speed up CPU work or always beat threads. |
+| "Asyncio replaces threading" | No — threads remain useful for blocking I/O and native code that releases the GIL. Pure Python CPU parallelism usually needs processes on GIL-enabled CPython. |
 | "Asyncio removes the GIL problem" | No — Asyncio is single-threaded, so the GIL is irrelevant (but you also can't use multiple cores) |
-| "Asyncio prevents all race conditions" | False — distributed/microservice race conditions still exist |
+| "Asyncio prevents all race conditions" | False — shared-state operations can race across `await`, and external/distributed resource races still exist. |
 | "Asyncio makes concurrency easy" | Definitely not — it makes *certain* classes of bugs easier to avoid |
 
 ---
@@ -48,4 +47,4 @@ The book uses a robot restaurant as a mental model:
 > The key advantage of Asyncio over threaded code is that **context switches are visible** — `await` marks exactly where control transfers between coroutines. This makes it much easier to reason about shared resource access.
 
 ## Key Takeaway
-Asyncio is the right choice when you have **I/O-bound workloads** requiring **high concurrency** or **safety from shared-state race conditions**. It is *not* a general replacement for threading or multiprocessing.
+Asyncio is the right choice when you have **I/O-bound workloads** requiring **high concurrency** and async-compatible libraries. Its visible suspension points make shared state easier to reason about, not automatically safe. It is *not* a general replacement for threading or multiprocessing.

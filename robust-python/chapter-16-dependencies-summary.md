@@ -74,7 +74,7 @@ Use `pycallgraph2` to generate a runtime call graph:
 ### Interpreting Your Dependency Graph
 Healthy signs:
 - **Directed acyclic graph (DAG)**: no cycles
-- **Layered architecture**: high-level modules depend on low-level, never the reverse
+- **Layered architecture**: keep dependency direction explicit. With dependency inversion, business logic depends on owned abstractions while infrastructure implements them — not simply "high-level imports low-level".
 - **Few long-range edges**: isolated modules with well-defined interfaces
 
 Danger signs:

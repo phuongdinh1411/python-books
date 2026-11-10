@@ -8,13 +8,13 @@
 ### Computing Units
 - The **CPU** executes instructions and supports **vectorization** — running the same operation on multiple data in one clock cycle
 - The **GIL (Global Interpreter Lock)** in CPython allows only **one thread to execute Python bytecode at a time**, even on multicore machines
-  - Workarounds: `multiprocessing`, NumPy/Numba (which release the GIL), Cython, or distributed computing
-  - Python 3.2 greatly improved GIL performance; GIL-free Python is targeted for ~2028 (PEP 703)
+  - Workarounds on GIL-enabled builds: `multiprocessing`, native operations that release the GIL (many NumPy operations), appropriately compiled Numba/Cython code, or distributed computing
+  - **Modern note:** optional free-threaded CPython builds are available from Python 3.13 (PEP 703). This is not a promise that every installation or extension runs without the GIL.
 
 ### Memory Hierarchy (fastest → slowest, largest capacity)
 | Level | Speed | Capacity |
 |---|---|---|
-| L1/L2 CPU Cache | Extremely fast | Dozens of MB |
+| L1/L2/L3 CPU Cache | Extremely fast | L1 typically tens of KiB per core; L2 often hundreds of KiB to a few MiB; L3 often tens of MiB shared |
 | RAM | Fast | ~64 GB |
 | SSD | Medium | ~1 TB |
 | HDD | Slow | ~20 TB |
@@ -41,7 +41,7 @@
 
 1. **No automatic vectorization** — Python bytecode doesn't detect loop patterns to issue SIMD instructions
 2. **Memory fragmentation** — Python lists store *pointers*, not raw values; data is scattered in RAM → poor cache utilization
-3. **Dynamic types** — every operation checks types at runtime; no compiler optimization possible
+3. **Dynamic types** — runtime dispatch and object handling add overhead; specialization/JIT compilers can optimize some stable patterns
 4. **GIL** — prevents true multi-thread parallelism for Python bytecode
 
 > **Fix**: Use NumPy (contiguous memory + vectorized C code), Cython (compile with type hints), Numba (JIT), or multiprocessing (separate Python interpreters).
@@ -84,13 +84,13 @@
 ## The Future of Python
 
 ### GIL-Free Python (PEP 703)
-- Experimental work ongoing since 2023
-- Targets scientific/AI workloads with many CPU threads
-- Estimated general availability: ~2028
+- Optional free-threaded builds introduced in Python 3.13
+- Targets workloads that benefit from shared-memory CPU threads
+- Availability, extension compatibility, and actual speedups depend on the interpreter build and workload; benchmark rather than relying on a future date
 
 ### JIT Compiler (Python 3.13+)
 - Uses **"copy-and-patch"** approach (Lua-inspired, built with LLVM stencils)
 - Python 3.11: adaptive type-specializing interpreter (10–25% speedup)
 - Python 3.12: internal cleanups + DSL for the interpreter
-- Python 3.13: hot-spot detector + copy-and-patch JIT
+- Python 3.13: optional experimental copy-and-patch JIT; not enabled in every build and not a guaranteed speedup
 - Impact mainly on pure Python numeric code, not NumPy/SciPy (already compiled in C)

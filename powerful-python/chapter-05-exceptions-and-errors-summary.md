@@ -98,11 +98,12 @@ This silently **hides all exceptions** — including bugs. A real-world example 
 ```python
 try:
     do_something()
-except:
+except Exception:
     logging.exception("Caught an error")  # logs message + full traceback
+    raise  # propagate unless this boundary has a defined recovery policy
 ```
 - `logging.exception()` records the full stack trace automatically
-- `except Exception:` and `except Exception as ex:` are equally dangerous as bare `except:`
+- Bare `except:` catches `BaseException`, including `KeyboardInterrupt` and `SystemExit`. `except Exception:` excludes those control-flow exceptions, but still needs a deliberate recovery or re-raise policy to avoid hiding bugs.
 
 ## Key Takeaways
 - Handle specific exceptions, not broad ones — the more pinpointed, the better

@@ -99,7 +99,7 @@ console.setLevel(logging.WARNING)  # Only warnings+ on screen
 logger.addHandler(console)
 
 logfile = logging.FileHandler("verbose.log")
-# No setLevel → inherits DEBUG from logger
+# No setLevel → handler defaults to NOTSET; the logger's DEBUG threshold filters records
 logger.addHandler(logfile)
 ```
 

@@ -9,7 +9,7 @@ Basic annotations declare what *kind* of value something is. Constraining types 
 - Use instead of bare `None` references — C.A.R. Hoare called null the "billion-dollar mistake"
 - `Optional[str]` signals: "this may or may not have a value"
 - Forces callers to explicitly handle the `None` case
-- Replace `if x is not None:` patterns with `Optional` in signatures to make the possibility explicit
+- Annotate the possibility of `None` **and keep runtime checks** such as `if x is not None:` to narrow the type before use. `Optional` does not replace those checks or mean the argument can be omitted.
 
 ### 2. `Union[A, B]` (aka `A | B`)
 - A value can be one of several types
@@ -36,9 +36,9 @@ Basic annotations declare what *kind* of value something is. Constraining types 
   ```python
   UserId = NewType("UserId", int)
   ```
-- `UserId` and `int` are incompatible from the typechecker's perspective
+- A `UserId` is accepted where an `int` is expected, but a plain `int` is not accepted where a `UserId` is required
 - Prevents accidentally passing a raw `int` where a `UserId` is expected
-- Zero runtime cost — erased at runtime
+- At runtime `UserId(value)` returns the original value without wrapping or validation; the call still has a small cost
 
 ### 6. `Final`
 - Marks a variable as a constant that should never be rebound:
@@ -46,6 +46,7 @@ Basic annotations declare what *kind* of value something is. Constraining types 
   MAX_SIZE: Final = 100
   ```
 - Communicates intent; typechecker flags any attempted reassignment
+- `Final` prevents rebinding in statically checked code; it does not freeze a referenced list/dict or enforce runtime immutability
 - Use for module-level constants and class-level configuration values
 
 ## Closing Thoughts

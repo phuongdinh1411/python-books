@@ -65,10 +65,13 @@ Better tools:
 
 ## Bytes vs. Unicode
 
-In Python 3, common ASCII strings cost the **same as bytes** (1 byte/char) thanks to PEP 393's flexible Unicode representation:
+CPython's PEP 393 string representation uses 1, 2, or 4 bytes per code point depending on the largest code point in a string; object headers add overhead. ASCII `str` and `bytes` both use one byte per character in their payload, but their total sizes differ. This is **not UTF-8 storage**.
 ```python
-%memit "u" * 100_000_000   # ~0 MB overhead (1 byte/char for ASCII)
-%memit "Σ" * 100_000_000   # 129 MB overhead (2 bytes/char for UTF-8 Σ)
+import sys
+
+sys.getsizeof("u" * 100_000)  # one-byte payload plus str header
+sys.getsizeof("Σ" * 100_000)  # two-byte payload plus str header
+sys.getsizeof(b"u" * 100_000) # one-byte payload plus bytes header
 ```
 
 ---
@@ -137,7 +140,9 @@ bloom.add("item")
 - Supports **union** operations
 - Evolved from LogLog → SuperLogLog → HyperLogLog → HyperLogLog++
 
-### Comparison at 0.05% Error, 100M Unique Elements
+### Illustrative Memory Comparison for 100M Unique Elements
+
+Cardinality sketches use **relative standard error**; Bloom filters use **false-positive probability**. These are different metrics, so the rows below must not be read as sharing a single "0.05% error" guarantee. Exact memory figures depend on parameters, implementation, and element types.
 
 | Structure | RAM | Operations |
 |---|---|---|
@@ -150,7 +155,7 @@ bloom.add("item")
 
 ## Key Takeaways
 
-1. Install `numexpr` alongside NumPy/Pandas — it's a free speedup and RAM saving with zero code changes
+1. Try NumExpr for supported large expressions; ordinary NumPy operations do not automatically use it, and speed/memory gains depend on expression and array size
 2. Use `%memit` (not `sys.getsizeof`) to measure actual RAM usage
 3. For large string collections, **Marisa trie** reduces 1.3 GB (set) to 39 MB (loaded trie)
 4. Probabilistic structures trade small error guarantees for orders-of-magnitude RAM savings

@@ -8,7 +8,7 @@ A typechecker is only as useful as its configuration. Tuning your typechecker pr
 ### Key Configuration Options (`mypy.ini` or `pyproject.toml`)
 | Option | Effect |
 |---|---|
-| `--strict` | Enables all strictness checks at once |
+| `--strict` | Enables a bundled set of strictness checks, not every possible mypy check; the bundle can change by version |
 | `--disallow-untyped-defs` | Require annotations on all functions |
 | `--disallow-any-generics` | Forbid bare `list`, `dict` without type params |
 | `--warn-return-any` | Warn when returning `Any` from annotated functions |
@@ -23,7 +23,7 @@ Start lenient and **incrementally increase strictness** as the codebase gains co
 
 ### Speeding Up mypy
 - **Incremental mode** (default): caches results, only re-checks changed files
-- **`--daemon` / `dmypy`**: persistent background process; dramatically faster on large codebases
+- **`dmypy run -- mypy <paths>`**: persistent daemon workflow; speeds up repeated checks on large codebases
 - Use `.mypy_cache/` — don't delete it unless debugging
 
 ## Alternative Typecheckers

@@ -57,7 +57,7 @@ Measures the number of independent paths through code. High complexity = hard to
 ```bash
 radon cc my_module.py -s
 ```
-Complexity grades: A (1-5) → F (>25). Target A/B for critical code.
+Complexity grades: A (1–5), B (6–10), C (11–20), D (21–30), E (31–40), F (41+). Target A/B where practical; use the metric to prompt investigation rather than as a correctness verdict.
 
 ### Cognitive Complexity
 A human-oriented metric that accounts for nesting depth and branching in ways cyclomatic complexity doesn't.

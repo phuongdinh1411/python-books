@@ -13,8 +13,8 @@ When programs spend most of their time waiting on external data sources (network
 
 | Concept | Description |
 |---|---|
-| **Concurrency** | Interleaving tasks on a **single thread** to hide I/O wait time |
-| **Parallelism** | Multiple tasks each get their **own resources/process** (covered in Ch. 10) |
+| **Concurrency** | Multiple tasks make progress over overlapping periods; async I/O often interleaves them on one thread |
+| **Parallelism** | Multiple tasks execute simultaneously, for example across CPU cores (processes covered in Ch. 10) |
 
 Concurrency is generally easier to reason about since all functions share the same memory space, but you still need to watch for **race conditions**.
 
@@ -25,7 +25,7 @@ Concurrency is generally easier to reason about since all functions share the sa
 The runtime uses an **event loop** — a queue of functions to call. When a task hits I/O, it defers (yields) control back to the loop, which then runs another pending task. Two programming paradigms:
 
 1. **Callbacks** — Pass a function to be called when the result is ready. Can lead to "callback hell."
-2. **Futures / `async`/`await`** (modern, preferred) — An `async def` function returns a `Future` (a promise). `await` pauses the coroutine until the result is ready, while the event loop runs other tasks.
+2. **Coroutines / `async`/`await`** (modern, preferred) — Calling a coroutine function returns a **coroutine object**, not a `Future`. Await it or schedule it as a `Task`; tasks and futures represent completion. `await` may suspend execution while the loop runs other tasks.
 
 Under the hood, `async`/`await` is built on Python **generators** — `await` is like `yield`, pausing and resuming execution.
 
@@ -62,7 +62,7 @@ Three approaches compared for a CPU task (bcrypt hashing) that saves results to 
 - Key trick: `await asyncio.sleep(0)` inside the CPU loop — forces a yield to the event loop so queued I/O tasks can run
 - Effectively **hides the I/O time** behind CPU time
 - Result: **7.3× faster** than serial, **2× faster** on I/O than batched, and the benefit grows with more iterations
-- Rule of thumb: issue `asyncio.sleep(0)` roughly every **50–100ms of CPU work**
+- Cooperative yields can improve responsiveness between small CPU chunks, but do not make computation nonblocking or parallel. For substantial CPU-bound Python work, use a process executor; choose a yield budget based on latency requirements rather than a universal 50–100ms rule.
 
 ---
 
@@ -72,6 +72,6 @@ Three approaches compared for a CPU task (bcrypt hashing) that saves results to 
 - The **`asyncio` + `aiohttp`** ecosystem provides modern, readable async patterns
 - `asyncio.TaskGroup` (Python 3.11+) is the clean way to manage many concurrent tasks
 - `asyncio.gather()` is an alternative to TaskGroup, useful when independent task failures shouldn't cancel others
-- **Don't over-parallelize**: 100–200 concurrent requests is typically optimal
+- **Bound concurrency** with a semaphore or bounded worker queue; choose limits from service quotas, latency, memory, and measurements rather than a universal request count
 - Intermediate solutions (batching) can give most of the benefit with less complexity
 - For CPU-heavy work, full async + `multiprocessing` (Ch. 10) is needed to truly parallelize

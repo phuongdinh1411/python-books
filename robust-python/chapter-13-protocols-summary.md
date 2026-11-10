@@ -19,7 +19,7 @@ Python supports duck typing: any object supporting the right methods can be used
 
 ## Protocols (Python 3.8+)
 ```python
-from typing import Protocol
+from typing import Protocol, Self  # Self requires Python 3.11+; use typing_extensions on older versions
 
 class Splittable(Protocol):
     def split_in_half(self) -> tuple[Self, Self]: ...
@@ -72,9 +72,9 @@ Useful for plugin systems where the "plugin" is a module.
 ## Protocols vs. ABCs
 | | Protocol | ABC |
 |---|---|---|
-| Coupling | None (structural) | Requires inheritance |
-| Third-party types | ✅ Can satisfy without modification | ❌ Must subclass |
-| Explicit contract | Optional (`@runtime_checkable`) | Yes (`isinstance`) |
+| Coupling | Structural; no shared base required | Usually nominal inheritance; some ABCs also support registration or structural runtime checks |
+| Third-party types | Can satisfy without modification | Runtime registration may work, but does not add methods or establish static inheritance |
+| Runtime checks | Opt-in `@runtime_checkable`, presence checks only | `isinstance` recognizes inheritance/registration; abstract methods block incomplete subclass instantiation |
 | Typechecker support | ✅ Full | ✅ Full |
 
 Use **ABCs** when you own all the types and want explicit contract enforcement.  

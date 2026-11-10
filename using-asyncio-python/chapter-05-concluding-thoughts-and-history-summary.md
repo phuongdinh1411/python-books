@@ -28,11 +28,11 @@ The core innovation that makes modern asyncio possible wasn't a new algorithm or
 
 | Year | Python version | Feature |
 |---|---|---|
-| 1996 | Python 1.5.2 | `asyncore` module — first async socket support (now deprecated) |
+| 1999 | Python 1.5.2 | `asyncore` module — early async socket support (removed in Python 3.12) |
 | 2001 | Python 2.2 | `yield` keyword — generators (PEP 255) |
-| 2005 | Python 2.5 | `generator.send()` and `.throw()` — generators usable as coroutines (PEP 342) |
-| 2009 | Python 3.3 | `yield from` — simplified nested generator delegation (PEP 380) |
-| 2012 | Python 3.4 | `asyncio` module added to standard library (PEP 3156) |
+| 2006 | Python 2.5 | `generator.send()` and `.throw()` — generators usable as coroutines (PEP 342) |
+| 2012 | Python 3.3 | `yield from` — simplified nested generator delegation (PEP 380) |
+| 2014 | Python 3.4 | `asyncio` module added to standard library (PEP 3156) |
 | 2015 | Python 3.5 | `async def` and `await` keywords — **native coroutines** (PEP 492) |
 
 ### What Changed?
@@ -50,9 +50,9 @@ After `async`/`await`:
 
 ### asyncore → Twisted → asyncio
 
-- **asyncore** (1996): First attempt — fundamentally flawed API, considered obsolete
-- **Twisted** (2002): Fixed asyncore's problems; introduced deferreds and callbacks; heavily influenced asyncio's design
-- **asyncio** (2012/2015): Standard library solution; designed to be a common base for all async frameworks to build on top of (Twisted, Tornado, aiohttp, etc.)
+- **asyncore**: Early standard-library async networking; now removed
+- **Twisted**: Established callback/deferred-based framework; influenced asyncio's design
+- **asyncio** (stdlib from 2014, native coroutine syntax from 2015): A common event-loop foundation for compatible async frameworks
 
 ### Three Distinct Components of Python Async
 
@@ -64,8 +64,8 @@ After `async`/`await`:
 
 ## Overall Book Key Takeaways
 
-1. **Asyncio solves two things**: safe high-concurrency I/O and race condition elimination — not speed
-2. **Threads are still valuable** for CPU-bound parallelism; choose the right tool for the workload
+1. **Asyncio supports high-concurrency I/O** with visible suspension points; it reduces some shared-state hazards but does not eliminate races
+2. **Threads are still valuable** for blocking I/O and native CPU work that releases the GIL; processes usually suit CPU-bound Python on GIL-enabled CPython
 3. **`async def` / `await` are the foundation** — everything else builds on top
 4. **`asyncio.run()`** handles the event loop lifecycle; use it as your entry point
 5. **`create_task()` + `gather()`** are the primary tools for concurrent execution

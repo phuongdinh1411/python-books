@@ -32,7 +32,7 @@ def fibonacci_gen(n):
 | `fibonacci_list` | 227 ms | **418 MB** |
 | `fibonacci_gen` | 82 ms | **~0 MB** |
 
-**2.7× faster, essentially zero extra memory.**
+**These timings depend on consuming the generator without retaining its output.** Generators avoid a stored sequence, not all memory use: Fibonacci integers themselves grow with `n`, so this example is not strictly constant-byte memory.
 
 ---
 
@@ -69,7 +69,7 @@ If data needs to be referenced multiple times, a precomputed list may be faster 
 # WRONG: creates a full list in memory just to get the length
 divisible = len([n for n in fibonacci_gen(100_000) if n % 3 == 0])  # ~98 MB
 
-# RIGHT: generator comprehension — no memory overhead
+# RIGHT: streams the count without storing all matching numbers
 divisible = sum(1 for n in fibonacci_gen(100_000) if n % 3 == 0)
 ```
 
