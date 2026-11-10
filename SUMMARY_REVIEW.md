@@ -1,5 +1,15 @@
 # Review of the Book Summaries
 
+## Second Review Round
+
+A follow-up pass re-read all 61 chapter summaries, the five book guides, and the root README, and re-ran the validation checks below.
+
+- **Chapter summaries:** no new correctness issues found. The first round's corrections (asyncio race/GIL model, server lifetime, resource cleanup, invariant construction, pickle/security, performance-number caveats, Pydantic v2, Hypothesis strategies) are all still present and consistent.
+- **Gap found and fixed:** the `using-asyncio-python/` directory still held the original 5-line project README, not a learner guide — even though the first-round report and the root README treated all five books as having guides. Added a full [Using Asyncio learner guide](using-asyncio-python/README.md) matching the other four (one-minute overview, quick route, chapter map, "Do Not Confuse," a runnable standard-library practice, and self-check), while preserving the original book attribution and cover image. Also corrected the cover image path from the absolute `/resource/...` to the relative `resource/...`.
+- **Validation:** 271 Python blocks parse; 0 broken local Markdown links; `git diff --check` clean; the new guide's practice example runs on Python 3.12.10.
+
+The claim that every book directory now has a guide is accurate after this round.
+
 ## Scope and Verdict
 
 Reviewed **61 chapter summaries across five books** for scanability, learning value, internal consistency, and Python/API correctness. Added learner guides and corrected clear issues directly in the notes.
