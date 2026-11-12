@@ -1,6 +1,6 @@
 # Python Books — Fast Learning Guide
 
-Chapter summaries for five books, organized to help you understand the main ideas and then apply them. These are learning notes, not replacements for the books or a verified reproduction of every chapter.
+Chapter summaries for six books, organized to help you understand the main ideas and then apply them. These are learning notes, not replacements for the books or a verified reproduction of every chapter.
 
 ## Choose a Book
 
@@ -11,8 +11,9 @@ Chapter summaries for five books, organized to help you understand the main idea
 | Make a growing codebase safer | [Robust Python](robust-python/README.md) | Communicate intent through types, contracts, boundaries, and tests | Functions, classes, basic testing |
 | Make slow or memory-heavy code faster | [High Performance Python](high-performance-python/README.md) | Measure first; improve algorithms and data layout before scaling | Intermediate Python; NumPy helps |
 | Understand concurrent network programs | [Using Asyncio in Python](using-asyncio-python/README.md) | Overlap I/O using cooperative tasks with explicit lifetime and cancellation | Iterators, exceptions, context managers |
+| Master asyncio end-to-end (web, DB, processes, threads) | [Python Concurrency with asyncio](python-concurrency-asyncio/README.md) | Full concurrency toolkit: coroutines, multiprocessing, threading, queues, sync primitives, web apps | asyncio basics, aiohttp or similar |
 
-**Suggested order:** Powerful Python → Effective Python → Robust Python. Then choose High Performance Python or Using Asyncio based on a real project need. You do not need to read all five in order.
+**Suggested order:** Powerful Python → Effective Python → Robust Python. Then choose High Performance Python or Using Asyncio based on a real project need. Read *Python Concurrency with asyncio* after *Using Asyncio* for a deeper, more applied treatment. You do not need to read all six in order.
 
 ## How to Use the Summaries
 
@@ -31,7 +32,12 @@ Reading alone builds familiarity; explaining and changing working code builds us
 | Iterators and lazy pipelines | [Powerful, Ch. 1](powerful-python/chapter-01-scaling-with-generators-summary.md) | [Effective, Ch. 4](effective-python/chapter-04-comprehensions-and-generators-summary.md); [Performance, Ch. 5](high-performance-python/chapter-05-iterators-and-generators-summary.md) |
 | Function APIs and decorators | [Powerful, Ch. 3](powerful-python/chapter-03-advanced-functions-summary.md) | [Effective, Ch. 3](effective-python/chapter-03-functions-summary.md) |
 | Types and domain models | [Robust, Ch. 4](robust-python/chapter-04-constraining-types-summary.md) | [Robust, Ch. 9](robust-python/chapter-09-user-defined-types-data-classes-summary.md) and [Ch. 13](robust-python/chapter-13-protocols-summary.md) |
-| Choosing concurrency | [Effective, Ch. 7](effective-python/chapter-07-concurrency-and-parallelism-summary.md) | [Asyncio, Ch. 3](using-asyncio-python/chapter-03-asyncio-walkthrough-summary.md); [Performance, Ch. 10](high-performance-python/chapter-10-multiprocessing-summary.md) |
+| Choosing concurrency | [Effective, Ch. 7](effective-python/chapter-07-concurrency-and-parallelism-summary.md) | [Asyncio, Ch. 3](using-asyncio-python/chapter-03-asyncio-walkthrough-summary.md); [Concurrency, Ch. 1](python-concurrency-asyncio/chapter-01-getting-to-know-asyncio-summary.md); [Performance, Ch. 10](high-performance-python/chapter-10-multiprocessing-summary.md) |
+| asyncio coroutines and tasks | [Asyncio (Hattingh), Ch. 3](using-asyncio-python/chapter-03-asyncio-walkthrough-summary.md) | [Concurrency, Ch. 2](python-concurrency-asyncio/chapter-02-asyncio-basics-summary.md); [Concurrency, Ch. 4](python-concurrency-asyncio/chapter-04-concurrent-web-requests-summary.md) |
+| CPU-bound parallelism | [Performance, Ch. 10](high-performance-python/chapter-10-multiprocessing-summary.md) | [Concurrency, Ch. 6](python-concurrency-asyncio/chapter-06-handling-cpu-bound-work-summary.md) |
+| Blocking I/O and thread pools | [Asyncio (Hattingh), Ch. 4](using-asyncio-python/chapter-04-asyncio-libraries-summary.md) | [Concurrency, Ch. 7](python-concurrency-asyncio/chapter-07-handling-blocking-io-threads-summary.md) |
+| Async web frameworks | [Concurrency, Ch. 9](python-concurrency-asyncio/chapter-09-web-applications-summary.md) | [Concurrency, Ch. 10](python-concurrency-asyncio/chapter-10-microservices-resilience-summary.md) |
+| Concurrency synchronisation | [Concurrency, Ch. 11](python-concurrency-asyncio/chapter-11-synchronization-summary.md) | [Concurrency, Ch. 12](python-concurrency-asyncio/chapter-12-asynchronous-queues-summary.md) |
 | Profiling and memory | [Performance, Ch. 2](high-performance-python/chapter-02-profiling-to-find-bottlenecks-summary.md) | [Performance, Ch. 12](high-performance-python/chapter-12-using-less-ram-summary.md) |
 | Test quality | [Powerful, Ch. 7](powerful-python/chapter-07-automated-testing-summary.md) | [Robust, Ch. 21–24](robust-python/README.md#chapter-map) |
 | Interfaces and dependencies | [Robust, Ch. 11](robust-python/chapter-11-defining-your-interfaces-summary.md) | [Robust, Ch. 16](robust-python/chapter-16-dependencies-summary.md) and [Ch. 19](robust-python/chapter-19-pluggable-python-summary.md) |
@@ -47,6 +53,6 @@ Reading alone builds familiarity; explaining and changing working code builds us
 
 ## Review Status
 
-All 61 chapter summaries received an editorial/technical pass. Clear errors were corrected and book-level reading guides added. The remaining limitation is **source fidelity**: no source books or benchmark artifacts are present here, so completeness, quotations, exact timings, and edition alignment are not certified.
+All 75 chapter summaries received an editorial/technical pass. Clear errors were corrected and book-level reading guides added. The remaining limitation is **source fidelity**: no source books or benchmark artifacts are present here, so completeness, quotations, exact timings, and edition alignment are not certified.
 
 See [SUMMARY_REVIEW.md](SUMMARY_REVIEW.md) for findings, corrections, and follow-up priorities.
