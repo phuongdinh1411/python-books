@@ -17,12 +17,17 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *High Performance Python 2nd Ed* — Gorelick & Ozsvald | 📖 Book | Must |
-| [py-spy README](https://github.com/benfred/py-spy) | 🛠️ Tool | Must |
-| [Speedscope.app](https://www.speedscope.app/) | 🛠️ Tool | Must |
-| [Real Python: Python profiling](https://realpython.com/python-profiling/) | 📄 Article | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [Python Official Profiling docs](https://docs.python.org/3/library/profile.html) | 📄 Docs | ✅ Free |
+| [tracemalloc docs](https://docs.python.org/3/library/tracemalloc.html) | 📄 Docs | ✅ Free |
+| [py-spy — GitHub](https://github.com/benfred/py-spy) | 🛠️ Tool | ✅ Free |
+| [Speedscope.app](https://www.speedscope.app/) | 🛠️ Tool | ✅ Free |
+| [line_profiler — GitHub](https://github.com/pyutils/line_profiler) | 🛠️ Tool | ✅ Free |
+| [Real Python: Python profiling](https://realpython.com/python-profiling/) | 📄 Article | ✅ Free |
+| [Python Performance Tips — Official Wiki](https://wiki.python.org/moin/PythonSpeed/PerformanceTips) | 📄 Docs | ✅ Free |
+
+> 💡 **Optional paid book:** *High Performance Python 2nd Ed* — Gorelick & Ozsvald (O'Reilly)
 
 ---
 

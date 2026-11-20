@@ -17,12 +17,16 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Fundamentals of Data Engineering* — Reis & Housley | 📖 Book | Must |
-| [Airflow Official Docs](https://airflow.apache.org/docs/) | 📄 Docs | Must |
-| [dbt Official Docs](https://docs.getdbt.com/) | 📄 Docs | Must |
-| [The Data Engineering Cookbook](https://github.com/andkret/Cookbook) | 📄 Free PDF | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [Airflow Official Docs](https://airflow.apache.org/docs/) | 📄 Docs | ✅ Free |
+| [dbt Official Docs](https://docs.getdbt.com/) | 📄 Docs | ✅ Free |
+| [dbt Learn — Free courses](https://learn.getdbt.com/) | 🏥 Course | ✅ Free |
+| [The Data Engineering Cookbook — GitHub](https://github.com/andkret/Cookbook) | 📄 Free PDF | ✅ Free |
+| [Start Data Engineering — Pipeline Patterns](https://www.startdataengineering.com/post/design-patterns-modern-data-pipelines/) | 📄 Article | ✅ Free |
+| [Astronomer Airflow Guides](https://www.astronomer.io/docs/learn/) | 📄 Guides | ✅ Free |
+
+> 💡 **Optional paid book:** *Fundamentals of Data Engineering* — Reis & Housley (O'Reilly)
 
 ---
 

@@ -5,5 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "pdfminer-six>=20260107",
     "requests>=2.34.2",
+]
+
+[tool.uv.workspace]
+members = [
+    "using-asyncio-python",
+    "python-web",
 ]

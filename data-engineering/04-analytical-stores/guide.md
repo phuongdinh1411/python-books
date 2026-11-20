@@ -17,12 +17,17 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Designing Data-Intensive Applications* — Kleppmann Ch 3 | 📖 Book | Must |
-| [DuckDB Docs](https://duckdb.org/docs/) | 📄 Docs | Must |
-| [The Parquet Format — blog.twitter.com](https://blog.twitter.com/engineering/en_us/a/2013/dremel-made-simple-with-parquet) | 📄 Article | Recommended |
-| [Snowflake Architecture Docs](https://docs.snowflake.com/en/user-guide/intro-key-concepts) | 📄 Docs | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [DuckDB Docs](https://duckdb.org/docs/) | 📄 Docs | ✅ Free |
+| [Apache Parquet Official Docs](https://parquet.apache.org/documentation/latest/) | 📄 Docs | ✅ Free |
+| [Apache Parquet format explainer — Databricks](https://www.databricks.com/glossary/what-is-parquet) | 📄 Article | ✅ Free |
+| [Snowflake Architecture Docs](https://docs.snowflake.com/en/user-guide/intro-key-concepts) | 📄 Docs | ✅ Free |
+| [BigQuery Docs](https://cloud.google.com/bigquery/docs) | 📄 Docs | ✅ Free |
+| [Kimball Dimensional Modeling Techniques (PDF — archived)](https://www.thoughtspot.com/data-trends/analytics/kimball-vs-inmon-data-warehouse) | 📄 Article | ✅ Free |
+| [Star Schema — mode.com tutorial](https://mode.com/sql-tutorial/sql-business-analytics/) | 📄 Tutorial | ✅ Free |
+
+> 💡 **Optional paid book:** *Designing Data-Intensive Applications* Ch 3 — Martin Kleppmann (O'Reilly)
 
 ---
 
@@ -493,4 +498,4 @@ Take the e-commerce schema from Pillar 1 and transform it into a star schema:
 - https://parquet.apache.org/documentation/latest/
 - https://docs.snowflake.com/
 - https://cloud.google.com/bigquery/docs
-- https://www.kimballgroup.com/ (dimensional modeling bible)
+- https://www.thoughtspot.com/data-trends/analytics/kimball-vs-inmon-data-warehouse (Kimball vs Inmon modeling overview — free article)

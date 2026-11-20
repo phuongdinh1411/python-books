@@ -17,13 +17,18 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Python Concurrency with asyncio* — Matthew Fowler | 📖 Book | Must |
-| [Real Python: asyncio walkthrough](https://realpython.com/async-io-python/) | 📄 Article | Must |
-| [David Beazley — asyncio from scratch (PyCon 2015)](https://www.youtube.com/watch?v=MCs5OvhV9S4) | 🎥 Video | Must-watch |
-| [Real Python: Python Concurrency overview](https://realpython.com/python-concurrency/) | 📄 Article | Must |
-| [Python Docs — asyncio](https://docs.python.org/3/library/asyncio.html) | 📄 Docs | Reference |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [asyncio Official Docs](https://docs.python.org/3/library/asyncio.html) | 📄 Docs | ✅ Free |
+| [Real Python: async IO in Python](https://realpython.com/async-io-python/) | 📄 Article | ✅ Free |
+| [David Beazley — asyncio from scratch (PyCon 2015)](https://www.youtube.com/watch?v=MCs5OvhV9S4) | 🎥 Video | ✅ Free |
+| [Real Python: Python Concurrency overview](https://realpython.com/python-concurrency/) | 📄 Article | ✅ Free |
+| [threading docs](https://docs.python.org/3/library/threading.html) | 📄 Docs | ✅ Free |
+| [multiprocessing docs](https://docs.python.org/3/library/multiprocessing.html) | 📄 Docs | ✅ Free |
+| [concurrent.futures docs](https://docs.python.org/3/library/concurrent.futures.html) | 📄 Docs | ✅ Free |
+| [David Beazley — Concurrency talks playlist](https://www.youtube.com/results?search_query=david+beazley+python+concurrency) | 🎥 Video | ✅ Free |
+
+> 💡 **Optional paid book:** *Python Concurrency with asyncio* — Matthew Fowler (Manning)
 
 ---
 

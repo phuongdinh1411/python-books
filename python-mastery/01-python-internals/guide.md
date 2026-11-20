@@ -18,14 +18,19 @@ By the end of this pillar you will be able to:
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Fluent Python 2nd Ed* — Ch 1–13, 22–24 | 📖 Book | Must |
-| *CPython Internals* — Real Python | 📖 Book | Must |
-| [Python Data Model — Official Docs](https://docs.python.org/3/reference/datamodel.html) | 📄 Docs | Must |
-| *Inside the Python Virtual Machine* (free) | 📄 eBook | Optional |
-| [Raymond Hettinger — Super considered super!](https://www.youtube.com/watch?v=EiOglTERPEo) | 🎥 Video | Recommended |
-| [Brandon Rhodes — All About Dicts](https://www.youtube.com/watch?v=66P5FMkWoVU) | 🎥 Video | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [Python Data Model — Official Docs](https://docs.python.org/3/reference/datamodel.html) | 📄 Docs | ✅ Free |
+| [Inside the Python Virtual Machine — Obi Ike-Nwosu](https://leanpub.com/insidethepythonvirtualmachine/read) | 📄 eBook | ✅ Free |
+| [CPython Developer Guide — Internals](https://devguide.python.org/internals/) | 📄 Docs | ✅ Free |
+| [Python `dis` module docs](https://docs.python.org/3/library/dis.html) | 📄 Docs | ✅ Free |
+| [Python Descriptors — Real Python](https://realpython.com/python-descriptors/) | 📄 Article | ✅ Free |
+| [Python Metaclasses — Real Python](https://realpython.com/python-metaclasses/) | 📄 Article | ✅ Free |
+| [Raymond Hettinger — Super considered super! (YouTube)](https://www.youtube.com/watch?v=EiOglTERPEo) | 🎥 Video | ✅ Free |
+| [Brandon Rhodes — All About Dicts (YouTube)](https://www.youtube.com/watch?v=66P5FMkWoVU) | 🎥 Video | ✅ Free |
+
+> 💡 **Optional paid books** (excellent supplements if available via library/trial):
+> *Fluent Python 2nd Ed* (Luciano Ramalho), *CPython Internals* (Real Python)
 
 ---
 

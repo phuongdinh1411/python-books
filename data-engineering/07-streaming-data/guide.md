@@ -17,12 +17,14 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Kafka: The Definitive Guide 2nd Ed* — Shapira et al. | 📖 Book | Must |
-| [Kafka Official Docs](https://kafka.apache.org/documentation/) | 📄 Docs | Must |
-| [Confluent Developer](https://developer.confluent.io/) | 🌐 Site | Must — free courses |
-| [Faust (Python Streaming)](https://faust-streaming.github.io/faust/) | 📄 Docs | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [*Kafka: The Definitive Guide 2nd Ed* (Free PDF — Confluent)](https://www.confluent.io/resources/kafka-the-definitive-guide-v2/) | 📖 Book | ✅ Free (registration required) |
+| [Kafka Official Docs](https://kafka.apache.org/documentation/) | 📄 Docs | ✅ Free |
+| [Confluent Developer — Free Courses](https://developer.confluent.io/courses/) | 🏥 Course | ✅ Free |
+| [Spark Structured Streaming Guide](https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html) | 📄 Docs | ✅ Free |
+| [confluent-kafka Python client docs](https://docs.confluent.io/kafka-clients/python/current/overview.html) | 📄 Docs | ✅ Free |
+| [Faust Python Streaming (GitHub)](https://faust-streaming.github.io/faust/) | 📄 Docs | ✅ Free |
 
 ---
 

@@ -17,13 +17,16 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| [PostgreSQL Official Docs](https://www.postgresql.org/docs/current/) | 📄 Docs | Must — bookmark chapters 11, 14, 25 |
-| *SQL Performance Explained* — Markus Winand | 📖 Book | Must |
-| [pgexercises.com](https://pgexercises.com/) | 🌐 Interactive | Practice |
-| [High Performance PostgreSQL — Greg Smith](https://www.oreilly.com/library/view/postgresql-9-high/9781849510301/) | 📖 Book | Recommended |
-| [pganalyze blog](https://pganalyze.com/blog) | 📄 Blog | Excellent deep dives |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [PostgreSQL Official Docs](https://www.postgresql.org/docs/current/) | 📄 Docs | ✅ Free — bookmark ch 11, 14, 25 |
+| [use-the-index-luke.com](https://use-the-index-luke.com/) | 🌐 Site | ✅ Free — index internals in depth |
+| [pgexercises.com](https://pgexercises.com/) | 🌐 Interactive | ✅ Free |
+| [pganalyze blog](https://pganalyze.com/blog) | 📄 Blog | ✅ Free |
+| [explain.depesz.com](https://explain.depesz.com/) | 🛠️ Tool | ✅ Free — visualise EXPLAIN output |
+| [PostgreSQL Wiki — Performance Optimization](https://wiki.postgresql.org/wiki/Performance_Optimization) | 📄 Wiki | ✅ Free |
+
+> 💡 **Optional paid books:** *SQL Performance Explained* (Winand), *High Performance PostgreSQL* (Smith)
 
 ---
 

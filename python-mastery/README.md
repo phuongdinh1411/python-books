@@ -71,13 +71,20 @@ Week 14–15 → 09 Capstone Project
 
 ---
 
-## 📚 Must-Have Books (buy these first)
+## 📚 Free Core Resources
 
-| Book | Covers |
-|------|--------|
-| *Fluent Python 2nd Ed* — Luciano Ramalho | Internals, data model, concurrency |
-| *Python Concurrency with asyncio* — Matthew Fowler | asyncio deeply |
-| *High Performance Python 2nd Ed* — Gorelick & Ozsvald | Profiling, optimization |
-| *Python Testing with pytest* — Brian Okken | pytest completely |
-| *Robust Python* — Patrick Viafore | mypy, types, design |
-| *Architecture Patterns with Python* — Percival & Gregory | SQLAlchemy patterns, testing |
+| Resource | Covers | Link |
+|----------|--------|------|
+| Python Official Docs | Internals, data model, stdlib | https://docs.python.org/3/ |
+| *Inside the Python Virtual Machine* — Obi Ike-Nwosu | CPython internals, bytecode | https://leanpub.com/insidethepythonvirtualmachine/read |
+| *Architecture Patterns with Python* — Percival & Gregory | SQLAlchemy patterns, testing | https://www.cosmicpython.com/ |
+| Real Python Tutorials | asyncio, profiling, pytest, typing | https://realpython.com/ |
+| Official asyncio docs | asyncio deeply | https://docs.python.org/3/library/asyncio.html |
+| pytest Official Docs | pytest completely | https://docs.pytest.org/ |
+| mypy Official Docs | mypy, types | https://mypy.readthedocs.io/ |
+| Raymond Hettinger talks (YouTube) | Idiomatic Python, internals | https://www.youtube.com/results?search_query=raymond+hettinger+python |
+| David Beazley talks (YouTube) | asyncio, concurrency | https://www.youtube.com/results?search_query=david+beazley+python |
+
+> 💡 **Optional paid books** (excellent if you can access them via library/O'Reilly trial):
+> *Fluent Python 2nd Ed*, *Python Concurrency with asyncio*, *High Performance Python 2nd Ed*,
+> *Python Testing with pytest*, *Robust Python*

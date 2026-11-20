@@ -17,13 +17,17 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Learning SQL 3rd Ed* — Alan Beaulieu | 📖 Book | Must |
-| [SQLZoo](https://sqlzoo.net/) | 🌐 Interactive | Must — do all exercises |
-| [Mode SQL Tutorial](https://mode.com/sql-tutorial/) | 📄 Tutorial | Must |
-| [pgexercises.com](https://pgexercises.com/) | 🌐 Interactive | Must |
-| [Markus Winand — Modern SQL](https://modern-sql.com/) | 🌐 Site | Advanced reference |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [SQLZoo](https://sqlzoo.net/) | 🌐 Interactive | ✅ Free |
+| [Mode SQL Tutorial](https://mode.com/sql-tutorial/) | 📄 Tutorial | ✅ Free |
+| [pgexercises.com](https://pgexercises.com/) | 🌐 Interactive | ✅ Free |
+| [PostgreSQL Tutorial](https://www.postgresqltutorial.com/) | 📄 Tutorial | ✅ Free |
+| [Markus Winand — Modern SQL](https://modern-sql.com/) | 🌐 Site | ✅ Free |
+| [use-the-index-luke.com](https://use-the-index-luke.com/) | 🌐 Site | ✅ Free (same author as *SQL Performance Explained* book) |
+| [W3Schools SQL Reference](https://www.w3schools.com/sql/) | 📄 Reference | ✅ Free |
+
+> 💡 **Optional paid book:** *Learning SQL 3rd Ed* — Alan Beaulieu (O'Reilly)
 
 ---
 

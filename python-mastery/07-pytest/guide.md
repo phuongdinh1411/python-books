@@ -18,11 +18,16 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Python Testing with pytest 2nd Ed* — Brian Okken | 📖 Book | Must |
-| [pytest Official Docs](https://docs.pytest.org/) | 📄 Docs | Must |
-| [Real Python pytest guide](https://realpython.com/pytest-python-testing/) | 📄 Article | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [pytest Official Docs](https://docs.pytest.org/) | 📄 Docs | ✅ Free |
+| [Real Python pytest guide](https://realpython.com/pytest-python-testing/) | 📄 Article | ✅ Free |
+| [pytest-mock docs](https://pytest-mock.readthedocs.io/) | 📄 Docs | ✅ Free |
+| [pytest-asyncio docs](https://pytest-asyncio.readthedocs.io/) | 📄 Docs | ✅ Free |
+| [coverage.py docs](https://coverage.readthedocs.io/) | 📄 Docs | ✅ Free |
+| [Architecture Patterns with Python — Testing chapter](https://www.cosmicpython.com/book/chapter_03_abstractions.html) | 📄 Free Book | ✅ Free |
+
+> 💡 **Optional paid book:** *Python Testing with pytest* — Brian Okken (Pragmatic Programmers)
 
 ---
 

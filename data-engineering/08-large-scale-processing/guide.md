@@ -17,12 +17,16 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Designing Data-Intensive Applications* — Kleppmann | 📖 Book | Must (Ch 10–12) |
-| [Delta Lake Docs](https://docs.delta.io/) | 📄 Docs | Must |
-| [Debezium Docs](https://debezium.io/documentation/) | 📄 Docs | Must |
-| [The Data Engineering Cookbook](https://github.com/andkret/Cookbook) | 📄 Free PDF | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [Delta Lake Docs](https://docs.delta.io/) | 📄 Docs | ✅ Free |
+| [Debezium Docs](https://debezium.io/documentation/reference/stable/) | 📄 Docs | ✅ Free |
+| [Great Expectations Docs](https://greatexpectations.io/) | 📄 Docs | ✅ Free |
+| [The Data Engineering Cookbook — GitHub](https://github.com/andkret/Cookbook) | 📄 Free PDF | ✅ Free |
+| [Martin Kleppmann — Lecture notes (YouTube)](https://www.youtube.com/playlist?list=PLeKd45zvjcDFUEv_ohr_HdUFe97RItdiB) | 🎥 Video | ✅ Free (covers DDIA topics) |
+| [Databricks Delta Lake blog](https://www.databricks.com/blog/2019/08/14/productionizing-machine-learning-with-delta-lake.html) | 📄 Article | ✅ Free |
+
+> 💡 **Optional paid book:** *Designing Data-Intensive Applications* Ch 10–12 — Martin Kleppmann (O'Reilly)
 
 ---
 

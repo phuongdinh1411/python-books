@@ -16,12 +16,15 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *SQL Performance Explained* — Markus Winand | 📖 Book | Must — read cover to cover |
-| [use-the-index-luke.com](https://use-the-index-luke.com/) | 🌐 Site | Free companion to the book |
-| [explain.depesz.com](https://explain.depesz.com/) | 🛠️ Tool | Visualize EXPLAIN output |
-| [pganalyze Index Advisor](https://pganalyze.com/index-advisor) | 🛠️ Tool | Index recommendations |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [use-the-index-luke.com](https://use-the-index-luke.com/) | 🌐 Site | ✅ Free — full content of *SQL Performance Explained* |
+| [explain.depesz.com](https://explain.depesz.com/) | 🛠️ Tool | ✅ Free |
+| [PostgreSQL: Using EXPLAIN](https://www.postgresql.org/docs/current/using-explain.html) | 📄 Docs | ✅ Free |
+| [pganalyze Index Advisor](https://pganalyze.com/index-advisor) | 🛠️ Tool | ✅ Free (account required) |
+| [pganalyze blog](https://pganalyze.com/blog) | 📄 Blog | ✅ Free |
+
+> 💡 **Optional paid book:** *SQL Performance Explained* — Markus Winand (all content free at use-the-index-luke.com)
 
 ---
 

@@ -16,12 +16,14 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Learning Spark 2nd Ed* — Chambers & Zaharia | 📖 Book | Must |
-| [PySpark Official Docs](https://spark.apache.org/docs/latest/api/python/) | 📄 Docs | Must |
-| [Polars User Guide](https://docs.pola.rs/) | 📄 Docs | Must |
-| [Data + AI Summit talks (YouTube)](https://www.youtube.com/@Databricks) | 🎥 Videos | Recommended |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [*Learning Spark 2nd Ed* (Free PDF — Databricks)](https://www.databricks.com/resources/ebook/learning-spark-lightning-fast-data-analytics) | 📖 Book | ✅ Free (registration required) |
+| [PySpark Official Docs](https://spark.apache.org/docs/latest/api/python/) | 📄 Docs | ✅ Free |
+| [Spark SQL & DataFrames Guide](https://spark.apache.org/docs/latest/sql-programming-guide.html) | 📄 Docs | ✅ Free |
+| [Polars User Guide](https://docs.pola.rs/) | 📄 Docs | ✅ Free |
+| [Data + AI Summit talks (YouTube — Databricks)](https://www.youtube.com/@Databricks) | 🎥 Videos | ✅ Free |
+| [Spark Performance Tuning Guide](https://spark.apache.org/docs/latest/tuning.html) | 📄 Docs | ✅ Free |
 
 ---
 

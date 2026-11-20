@@ -16,12 +16,17 @@
 
 ## 📚 Resources
 
-| Resource | Type | Priority |
-|----------|------|----------|
-| *Robust Python* — Patrick Viafore | 📖 Book | Must |
-| [mypy Official Docs](https://mypy.readthedocs.io/) | 📄 Docs | Must |
-| [Real Python Type Hints Guide](https://realpython.com/python-type-checking/) | 📄 Article | Must |
-| [PEP 484 — Type Hints](https://peps.python.org/pep-0484/) | 📄 PEP | Reference |
+| Resource | Type | Free? |
+|----------|------|-------|
+| [mypy Official Docs](https://mypy.readthedocs.io/) | 📄 Docs | ✅ Free |
+| [Real Python Type Hints Guide](https://realpython.com/python-type-checking/) | 📄 Article | ✅ Free |
+| [PEP 484 — Type Hints](https://peps.python.org/pep-0484/) | 📄 PEP | ✅ Free |
+| [PEP 526 — Variable Annotations](https://peps.python.org/pep-0526/) | 📄 PEP | ✅ Free |
+| [Python typing module docs](https://docs.python.org/3/library/typing.html) | 📄 Docs | ✅ Free |
+| [mypy cheat sheet](https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html) | 📄 Docs | ✅ Free |
+| [pyright docs (Microsoft)](https://github.com/microsoft/pyright) | 📄 Docs | ✅ Free |
+
+> 💡 **Optional paid book:** *Robust Python* — Patrick Viafore (O'Reilly)
 
 ---
 

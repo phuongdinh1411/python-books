@@ -54,16 +54,28 @@ Week 14–15 → 09 Capstone Project
 
 ---
 
-## 📚 Must-Have Books
+## 📚 Free Core Resources
 
-| Book | Covers |
-|------|--------|
-| *Learning SQL 3rd Ed* — Alan Beaulieu | SQL fundamentals to advanced |
-| *SQL Performance Explained* — Markus Winand | Index internals, query optimization |
-| *Designing Data-Intensive Applications* — Martin Kleppmann | The bible of data engineering |
-| *Fundamentals of Data Engineering* — Reis & Housley | ETL, pipelines, modern data stack |
-| *Learning Spark 2nd Ed* — Chambers & Zaharia | PySpark end-to-end |
-| *Kafka: The Definitive Guide 2nd Ed* — Shapira et al. | Kafka deep dive |
+| Resource | Covers | Link |
+|----------|--------|------|
+| PostgreSQL Official Docs | SQL, indexes, internals | https://www.postgresql.org/docs/current/ |
+| [SQLZoo](https://sqlzoo.net/) | SQL from basics to advanced | https://sqlzoo.net/ |
+| [Mode SQL Tutorial](https://mode.com/sql-tutorial/) | Analytics SQL | https://mode.com/sql-tutorial/ |
+| [pgexercises.com](https://pgexercises.com/) | PostgreSQL exercises | https://pgexercises.com/ |
+| [use-the-index-luke.com](https://use-the-index-luke.com/) | Index internals, query optimization (same author as *SQL Performance Explained*) | https://use-the-index-luke.com/ |
+| [*Learning Spark 2nd Ed*](https://www.databricks.com/resources/ebook/learning-spark-lightning-fast-data-analytics) | PySpark end-to-end | Free PDF via Databricks |
+| [*Kafka: The Definitive Guide 2nd Ed*](https://www.confluent.io/resources/kafka-the-definitive-guide-v2/) | Kafka deep dive | Free PDF via Confluent |
+| [*Architecture Patterns with Python*](https://www.cosmicpython.com/) | ETL patterns, testing | https://www.cosmicpython.com/ |
+| [*The Data Engineering Cookbook*](https://github.com/andkret/Cookbook) | ETL, pipelines, modern stack | Free PDF on GitHub |
+| [Airflow Official Docs](https://airflow.apache.org/docs/) | Pipeline orchestration | https://airflow.apache.org/docs/ |
+| [dbt Official Docs](https://docs.getdbt.com/) | ELT transformations | https://docs.getdbt.com/ |
+| [Confluent Developer](https://developer.confluent.io/) | Kafka courses & tutorials | https://developer.confluent.io/ |
+| [Delta Lake Docs](https://docs.delta.io/) | ACID data lakes | https://docs.delta.io/ |
+| [DuckDB Docs](https://duckdb.org/docs/) | Local analytics | https://duckdb.org/docs/ |
+
+> 💡 **Optional paid books** (excellent if available via library/O'Reilly trial):
+> *Designing Data-Intensive Applications* (Kleppmann), *Fundamentals of Data Engineering* (Reis & Housley),
+> *Learning SQL* (Beaulieu), *SQL Performance Explained* (Winand)
 
 ---
 
