@@ -465,6 +465,158 @@ class Task(Base):
 
 ---
 
+## Section 9 — `ParamSpec`, `TypeVarTuple`, `Self`, `TypeGuard`
+
+### `ParamSpec` — Type Decorators That Preserve Signatures
+
+```python
+from typing import ParamSpec, Callable, TypeVar
+import functools
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+def logged(func: Callable[P, R]) -> Callable[P, R]:
+    """A decorator that preserves the wrapped function's full signature."""
+    @functools.wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+        print(f"Calling {func.__name__}")
+        result = func(*args, **kwargs)
+        print(f"Done {func.__name__}")
+        return result
+    return wrapper
+
+@logged
+def add(x: int, y: int, label: str = "sum") -> str:
+    return f"{label}: {x + y}"
+
+# mypy now knows: add takes (int, int, label=str) -> str
+reveal_type(add)   # (x: int, y: int, label: str = ...) -> str
+```
+
+### `Self` — Methods That Return Their Own Type
+
+```python
+from typing import Self
+
+class Builder:
+    def __init__(self) -> None:
+        self._parts: list[str] = []
+
+    def add(self, part: str) -> Self:
+        """Returns Self, not Builder — works correctly on subclasses too."""
+        self._parts.append(part)
+        return self
+
+    def build(self) -> str:
+        return " ".join(self._parts)
+
+class ExtendedBuilder(Builder):
+    def add_prefix(self, prefix: str) -> Self:
+        self._parts.insert(0, prefix)
+        return self
+
+# mypy knows: b.add("x").add_prefix(">>") returns ExtendedBuilder
+b = ExtendedBuilder()
+result = b.add("hello").add_prefix(">>").build()
+```
+
+### `TypeGuard` — Narrow Types in Conditionals
+
+```python
+from typing import TypeGuard
+
+def is_string_list(val: list[object]) -> TypeGuard[list[str]]:
+    """Runtime check that also narrows the type for mypy."""
+    return all(isinstance(v, str) for v in val)
+
+def process(items: list[object]) -> None:
+    if is_string_list(items):
+        # mypy knows items is list[str] inside this block
+        for item in items:
+            print(item.upper())   # no mypy error!
+
+# TypeGuard for union narrowing
+from typing import Union
+
+def is_int(val: Union[int, str]) -> TypeGuard[int]:
+    return isinstance(val, int)
+
+def double_if_int(val: int | str) -> int | str:
+    if is_int(val):
+        return val * 2   # mypy: val is int here
+    return val
+```
+
+### `TypeVarTuple` and `Unpack` — Variadic Generics
+
+```python
+from typing import TypeVarTuple, Unpack
+
+Ts = TypeVarTuple("Ts")
+
+def zip_tuples(
+    *tuples: Unpack[tuple[tuple[Unpack[Ts]], ...]]
+) -> tuple[Unpack[Ts]]:
+    ...
+
+# Practical example: typed function pipelines
+def pipe(value: int, *fns: Callable[[int], int]) -> int:
+    result = value
+    for fn in fns:
+        result = fn(result)
+    return result
+
+# Python 3.11+ has better TypeVarTuple support
+# Most useful in library code, less so in application code
+```
+
+---
+
+## Section 10 — `Annotated` — Rich Type Metadata
+
+```python
+from typing import Annotated
+from pydantic import Field
+
+# FastAPI uses Annotated for DI + validation in one place
+# (Cleaner than mixing Depends and defaults)
+
+from fastapi import Depends, Query
+
+# Old style (verbose):
+# async def route(
+#     skip: int = Query(0, ge=0),
+#     limit: int = Query(20, ge=1, le=100),
+#     db: AsyncSession = Depends(get_db),
+# ):
+
+# New style with Annotated (more composable):
+Skip  = Annotated[int, Query(0, ge=0, description="Number to skip")]
+Limit = Annotated[int, Query(20, ge=1, le=100)]
+DB    = Annotated[AsyncSession, Depends(get_db)]
+Auth  = Annotated[int, Depends(get_current_user_id)]
+
+async def list_items(skip: Skip, limit: Limit, db: DB, user_id: Auth):
+    ...
+
+# Reuse across multiple routes — DRY!
+# Annotated carries metadata without changing the runtime type.
+
+# Pydantic v2 uses Annotated for validators:
+from pydantic import BaseModel, field_validator
+from annotated_types import Gt, Lt
+
+PositiveFloat = Annotated[float, Gt(0)]
+Percentage = Annotated[float, Gt(0), Lt(100)]
+
+class Pricing(BaseModel):
+    price: PositiveFloat
+    discount: Percentage
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Type an Untyped Module

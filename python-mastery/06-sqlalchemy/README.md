@@ -531,6 +531,123 @@ class TaskRepository(BaseRepository[Task]):
 
 ---
 
+## Section 9 — Streaming Large Result Sets
+
+For tables with millions of rows, loading everything into memory at once
+(`session.scalars(stmt).all()`) is dangerous. Use `yield_per` to stream.
+
+```python
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+# BAD: loads 10M rows into memory at once
+def export_all_orders_bad(session: Session):
+    orders = session.scalars(select(Order)).all()   # 10M rows in RAM!
+    for order in orders:
+        yield order.to_dict()
+
+# GOOD: stream in batches of 1000 rows
+def export_all_orders_good(session: Session):
+    stmt = select(Order).execution_options(yield_per=1000)
+    for batch in session.scalars(stmt).partitions():
+        for order in batch:
+            yield order.to_dict()
+
+# Async version
+async def export_all_orders_async(session: AsyncSession):
+    stmt = select(Order).execution_options(yield_per=1000)
+    async for batch in await session.stream_scalars(stmt):
+        yield batch.to_dict()
+
+# With partitions
+async def export_partitioned(session: AsyncSession):
+    stmt = select(Order).order_by(Order.created_at)
+    result = await session.stream(stmt)
+    async for partition in result.scalars().partitions(500):
+        # process 500 rows at a time
+        order_dicts = [row.to_dict() for row in partition]
+        await write_to_file(order_dicts)
+```
+
+---
+
+## Section 10 — `hybrid_property` — Python + SQL Properties
+
+A `hybrid_property` behaves as a Python property on instances and as a SQL expression
+in queries — the best of both worlds.
+
+```python
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import select, case
+
+class Order(Base):
+    __tablename__ = "orders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    subtotal: Mapped[float] = mapped_column()
+    discount: Mapped[float] = mapped_column(default=0.0)
+
+    @hybrid_property
+    def total(self) -> float:
+        """Python: compute total on this instance."""
+        return self.subtotal - self.discount
+
+    @total.expression
+    @classmethod
+    def total(cls):
+        """SQL: used in queries."""
+        return cls.subtotal - cls.discount
+
+    @hybrid_property
+    def is_high_value(self) -> bool:
+        return self.total >= 1000
+
+    @is_high_value.expression
+    @classmethod
+    def is_high_value(cls):
+        return (cls.subtotal - cls.discount) >= 1000
+
+
+# Python usage (on instance):
+order = Order(subtotal=200.0, discount=20.0)
+print(order.total)           # 180.0
+print(order.is_high_value)   # False
+
+# SQL usage (in query — no Python roundtrip!):
+stmt = select(Order).where(Order.total > 150)
+stmt = select(Order).where(Order.is_high_value)
+# → SELECT * FROM orders WHERE (orders.subtotal - orders.discount) > 150
+
+# Order by computed column:
+stmt = select(Order).order_by(Order.total.desc())
+```
+
+---
+
+## Section 11 — Advanced Alembic: `op.batch_alter_table` for SQLite
+
+SQLite does not support `ALTER COLUMN` or `DROP COLUMN` directly.
+Alembic's batch mode rewrites the table under the hood.
+
+```python
+# In any migration — always use batch_alter_table for safety on SQLite + PostgreSQL
+def upgrade() -> None:
+    with op.batch_alter_table("tasks") as batch_op:
+        # These all work safely on both SQLite and PostgreSQL
+        batch_op.add_column(sa.Column("priority", sa.Integer(), nullable=True))
+        batch_op.alter_column("title", new_column_name="task_title")
+        batch_op.drop_column("old_column")
+        batch_op.create_index("ix_tasks_priority", ["priority"])
+
+def downgrade() -> None:
+    with op.batch_alter_table("tasks") as batch_op:
+        batch_op.drop_index("ix_tasks_priority")
+        batch_op.drop_column("priority")
+        batch_op.alter_column("task_title", new_column_name="title")
+        batch_op.add_column(sa.Column("old_column", sa.Text()))
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Full Data Model

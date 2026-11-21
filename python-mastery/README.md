@@ -1,4 +1,4 @@
-# 🐍 Python Mastery — Complete Learning Guide
+# 🐍 Python Mastery — Production-Grade Course
 
 > A structured, hands-on curriculum to reach advanced Python proficiency
 > as required for senior/staff Python engineering roles.
@@ -58,6 +58,47 @@ Week 14–15 → 09 Capstone Project
 - [ ] 07 pytest
 - [ ] 08 mypy & Type Annotations
 - [ ] 09 Capstone — Task Manager API
+
+---
+
+## 🎯 What You Will Build
+
+| Deliverable | Skills Demonstrated |
+|-------------|--------------------|
+| `cached_property`, descriptor, metaclass implementations | Python internals, data model |
+| Concurrent web scraper with rate limiting | asyncio, TaskGroup, Semaphore |
+| Flame graph + memory leak diagnosis | py-spy, memray, tracemalloc |
+| Published package on TestPyPI | pyproject.toml, uv, wheel |
+| **Full Task Manager API** (FastAPI + SQLAlchemy + pytest + mypy) | All pillars combined |
+
+---
+
+## 🧭 Entry Points by Experience Level
+
+| Your background | Start here |
+|-----------------|------------|
+| New to Python internals | Pillar 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → Capstone |
+| Know Python, new to async | Pillar 2 → 5 → 6 → Capstone |
+| Know async, need typing/testing | Pillar 7 → 8 → Capstone |
+| Interviewing for senior roles | Pillars 1, 2, 5, 6, 7, 8 → Capstone |
+
+---
+
+## 🛠️ Local Dev Setup
+
+```bash
+# Prerequisites: Python 3.12+, uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Bootstrap the capstone project (uses all pillars)
+uv init task-manager && cd task-manager
+uv add fastapi uvicorn sqlalchemy[asyncio] asyncpg alembic pydantic pyjwt argon2-cffi structlog redis
+uv add --dev pytest pytest-asyncio pytest-cov pytest-mock httpx mypy ruff factory-boy
+
+# Start local PostgreSQL + Redis
+docker run -d --name tm_postgres -e POSTGRES_PASSWORD=pass -p 5432:5432 postgres:16
+docker run -d --name tm_redis -p 6379:6379 redis:7
+```
 
 ---
 

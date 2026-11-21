@@ -604,6 +604,160 @@ def test_unauthorized(client):
 
 ---
 
+## Section A9 — WebSockets (FastAPI)
+
+```python
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import Any
+import json
+
+app = FastAPI()
+
+class ConnectionManager:
+    """Manage active WebSocket connections with broadcast support."""
+
+    def __init__(self) -> None:
+        self.active: list[WebSocket] = []
+
+    async def connect(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self.active.append(ws)
+
+    def disconnect(self, ws: WebSocket) -> None:
+        self.active.remove(ws)
+
+    async def send(self, ws: WebSocket, message: dict) -> None:
+        await ws.send_json(message)
+
+    async def broadcast(self, message: dict) -> None:
+        dead = []
+        for ws in self.active:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.active.remove(ws)
+
+manager = ConnectionManager()
+
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(ws: WebSocket, client_id: str):
+    await manager.connect(ws)
+    await manager.broadcast({"type": "join", "user": client_id})
+    try:
+        while True:
+            data = await ws.receive_json()
+            # Echo back + broadcast to all
+            await manager.broadcast({"type": "message", "from": client_id, "data": data})
+    except WebSocketDisconnect:
+        manager.disconnect(ws)
+        await manager.broadcast({"type": "leave", "user": client_id})
+
+
+# Test WebSocket with httpx
+# pip install httpx[ws]
+import pytest
+from httpx import AsyncClient, ASGITransport
+
+@pytest.mark.asyncio
+async def test_websocket():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with client.websocket_connect("/ws/alice") as ws:
+            await ws.send_json({"text": "Hello"})
+            msg = await ws.receive_json()
+            assert msg["from"] == "alice"
+```
+
+---
+
+## Section A10 — `httpx` Async Client (The Right Way to Call APIs)
+
+```python
+# Use httpx.AsyncClient with connection pooling (not httpx.get() — that creates new connection)
+import httpx
+from typing import Any
+
+class APIClient:
+    """Reusable async HTTP client with retry, timeout, and base URL."""
+
+    def __init__(self, base_url: str, api_key: str, timeout: float = 10.0):
+        self._client = httpx.AsyncClient(
+            base_url=base_url,
+            headers={"Authorization": f"Bearer {api_key}"},
+            timeout=httpx.Timeout(timeout, connect=5.0),
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+        )
+
+    async def get(self, path: str, **params: Any) -> dict:
+        response = await self._client.get(path, params=params)
+        response.raise_for_status()   # raises HTTPStatusError on 4xx/5xx
+        return response.json()
+
+    async def post(self, path: str, data: dict) -> dict:
+        response = await self._client.post(path, json=data)
+        response.raise_for_status()
+        return response.json()
+
+    async def close(self) -> None:
+        await self._client.aclose()
+
+    async def __aenter__(self) -> "APIClient":
+        return self
+
+    async def __aexit__(self, *args: object) -> None:
+        await self.close()
+
+
+# Usage in FastAPI (create once at startup, reuse across requests)
+# In lifespan:
+# app.state.api_client = APIClient("https://api.example.com", api_key="...")
+
+# In a dependency:
+# def get_api_client(request: Request) -> APIClient:
+#     return request.app.state.api_client
+```
+
+---
+
+## Section B3 — Flask + Server-Sent Events (SSE)
+
+A lightweight alternative to WebSockets for one-way streaming (logs, progress, notifications).
+
+```python
+import time
+from flask import Flask, Response, stream_with_context
+import json
+
+app = Flask(__name__)
+
+def event_stream():
+    """Generator that yields SSE-formatted data."""
+    for i in range(10):
+        data = json.dumps({"step": i, "total": 10, "message": f"Processing item {i}"})
+        yield f"data: {data}\n\n"   # SSE format: "data: ...\n\n"
+        time.sleep(0.5)
+    yield "data: \"done\"\n\n"
+
+@app.route("/stream")
+def stream():
+    return Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",   # disable Nginx buffering
+        },
+    )
+
+# JavaScript client:
+# const es = new EventSource('/stream');
+# es.onmessage = (e) => console.log(JSON.parse(e.data));
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Full CRUD API (FastAPI)

@@ -1447,6 +1447,147 @@ curl http://localhost:8080/dlq        # → dead-letter jobs
 
 ---
 
+## 20. `asyncio.TaskGroup` Worker Pattern (Python 3.11+)
+
+The `TaskGroup`-based worker is safer than the classic `create_task` approach
+because it cancels all workers and propagates exceptions cleanly.
+
+```python
+# asyncio_queue/worker_taskgroup.py
+"""Alternative WorkerPool using TaskGroup (Python 3.11+)."""
+from __future__ import annotations
+import asyncio
+import logging
+
+from .config import Config
+from .models import Job, JobStatus
+from .queue_engine import QueueEngine
+from .retry import RetryPolicy
+from .metrics import Metrics
+
+logger = logging.getLogger(__name__)
+
+
+class TaskGroupWorkerPool:
+    """
+    Uses asyncio.TaskGroup for structured concurrency.
+    All workers are launched as tasks in the group.
+    If any worker crashes (unexpected exception), all siblings are cancelled.
+    """
+
+    def __init__(self, engine: QueueEngine, metrics: Metrics, config: Config | None = None):
+        self._engine  = engine
+        self._metrics = metrics
+        self._cfg     = config or Config()
+        self._stop    = asyncio.Event()
+
+    async def run(self) -> None:
+        """Start NUM_WORKERS workers, all inside one TaskGroup."""
+        try:
+            async with asyncio.TaskGroup() as tg:
+                for i in range(self._cfg.NUM_WORKERS):
+                    tg.create_task(
+                        self._worker_loop(worker_id=i),
+                        name=f"worker-{i}",
+                    )
+        except* Exception as eg:
+            # ExceptionGroup: collect all worker failures
+            for exc in eg.exceptions:
+                logger.error("worker failed: %s", exc)
+
+    def stop(self) -> None:
+        self._stop.set()
+
+    async def _worker_loop(self, worker_id: int) -> None:
+        while not self._stop.is_set():
+            try:
+                # Use wait with timeout so stop event is checked periodically
+                async with asyncio.timeout(1.0):
+                    job = await self._engine.dequeue()
+                await self._execute(job, worker_id)
+            except asyncio.TimeoutError:
+                continue   # check _stop and loop
+            except asyncio.CancelledError:
+                break
+
+    async def _execute(self, job: Job, worker_id: int) -> None:
+        self._metrics.job_started(job.func_name)
+        try:
+            result = await asyncio.wait_for(
+                job.func(*job.args, **job.kwargs),
+                timeout=self._cfg.JOB_TIMEOUT,
+            )
+            job.result = result
+            job.status = JobStatus.DONE
+            self._engine.task_done(job)
+            self._metrics.job_done(job.func_name, 0)
+        except Exception as exc:
+            job.error = str(exc)
+            policy = RetryPolicy(self._cfg)
+            if policy.should_retry(job):
+                await self._engine.retry(job, policy.backoff_seconds(job))
+            else:
+                self._engine.task_done(job)
+                self._engine.send_to_dlq(job)
+            self._metrics.job_failed(job.func_name)
+```
+
+---
+
+## 21. `contextvars` — Tracing Job Context Across Coroutines
+
+`contextvars` lets you attach a job ID to all log lines produced by a coroutine,
+without threading it through every function call.
+
+```python
+# asyncio_queue/context.py
+import contextvars
+import logging
+from contextlib import contextmanager
+
+# Module-level context variable
+job_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "job_id", default="<no-job>"
+)
+func_name_var: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "func_name", default=""
+)
+
+
+class ContextFilter(logging.Filter):
+    """Inject context variables into every log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.job_id   = job_id_var.get()
+        record.func_name_ctx = func_name_var.get()
+        return True
+
+
+def set_job_context(job_id: str, func_name: str) -> contextvars.Token:
+    """Set job context; returns token to restore previous context."""
+    t1 = job_id_var.set(job_id)
+    t2 = func_name_var.set(func_name)
+    return t1  # for simplicity, only return first token (could be a tuple)
+
+
+def clear_job_context(token: contextvars.Token) -> None:
+    job_id_var.reset(token)
+
+
+# Usage in worker._execute():
+async def _execute(self, job: Job, worker_id: int) -> None:
+    token = set_job_context(job.job_id, job.func_name)
+    try:
+        # All log calls inside job.func will automatically include job_id
+        logger.info("job_started")   # logged with job_id in context
+        result = await job.func(*job.args, **job.kwargs)
+        logger.info("job_done", extra={"result": result})
+    finally:
+        clear_job_context(token)
+```
+
+---
+
 ## 19. Limitations & When to Graduate
 
 `asyncio.Queue` lives entirely **in memory** in **one process**.

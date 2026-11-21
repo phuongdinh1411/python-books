@@ -2322,6 +2322,104 @@ ORDER BY pg_total_relation_size(relid) DESC;
 
 ---
 
+## 29. LISTEN/NOTIFY Integration Test
+
+```python
+# pgqueue/tests/test_notify.py
+import asyncio
+import pytest
+import asyncpg
+
+from pgqueue.db import create_pool
+from pgqueue.enqueue import enqueue
+from pgqueue.notify import NotifyListener
+
+
+@pytest.mark.asyncio
+async def test_notify_wakes_listener(pg_dsn: str):
+    """Enqueuing a job triggers NOTIFY and wakes the listener immediately."""
+    pool = await create_pool()
+    woke = asyncio.Event()
+
+    def on_notify():
+        woke.set()
+
+    listener = NotifyListener(dsn=pg_dsn, on_notify=on_notify)
+    listen_task = asyncio.create_task(listener.run())
+
+    await asyncio.sleep(0.1)   # give listener time to register LISTEN
+
+    # Enqueue a job — this triggers the INSERT trigger → NOTIFY
+    await enqueue(pool, "send_email", "test@example.com", subject="Hello")
+
+    # Listener should wake within 1 second
+    await asyncio.wait_for(woke.wait(), timeout=1.0)
+    assert woke.is_set()
+
+    listener.stop()
+    listen_task.cancel()
+    await asyncio.gather(listen_task, return_exceptions=True)
+    await pool.close()
+```
+
+---
+
+## 30. Concurrency Test — No Duplicate Dequeue
+
+```python
+# pgqueue/tests/test_concurrent_dequeue.py
+"""
+Stress test: 10 workers dequeue simultaneously.
+No job should be dequeued more than once.
+SELECT FOR UPDATE SKIP LOCKED must guarantee uniqueness.
+"""
+import asyncio
+import pytest
+import asyncpg
+from collections import Counter
+
+from pgqueue.db import create_pool
+from pgqueue.enqueue import enqueue_many
+from pgqueue.dequeue import dequeue
+
+
+@pytest.mark.asyncio
+async def test_no_duplicate_dequeue():
+    pool = await create_pool()
+
+    # Enqueue 50 jobs
+    specs = [{"func_name": "noop"} for _ in range(50)]
+    await enqueue_many(pool, specs)
+
+    claimed: list[str] = []
+    lock = asyncio.Lock()
+
+    async def worker(worker_id: str) -> None:
+        while True:
+            job = await dequeue(pool, queue="default", worker_id=worker_id)
+            if job is None:
+                return  # queue empty
+            async with lock:
+                claimed.append(job.job_id)
+            # Simulate fast processing
+            await asyncio.sleep(0.01)
+
+    # 10 concurrent workers racing to dequeue
+    async with asyncio.TaskGroup() as tg:
+        for i in range(10):
+            tg.create_task(worker(f"worker-{i}"))
+
+    # Every job_id must appear exactly once
+    counts = Counter(claimed)
+    duplicates = {k: v for k, v in counts.items() if v > 1}
+    assert not duplicates, f"Duplicate dequeues detected: {duplicates}"
+    assert len(claimed) == 50, f"Expected 50 unique dequeues, got {len(claimed)}"
+
+    await pool.close()
+```
+
+---
+
 ## 28. Production Checklist
 
 | Concern | Implementation |

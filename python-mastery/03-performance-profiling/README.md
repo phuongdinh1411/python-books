@@ -394,6 +394,111 @@ def build_fast(parts: list) -> str:
 
 ---
 
+## Section 7 — `memray` — The Best Python Memory Profiler
+
+`memray` (by Bloomberg) is far more powerful than `memory_profiler` —
+it tracks every allocation, works with native C extensions, and generates
+flame graphs, peak memory reports, and leak detectors.
+
+```bash
+pip install memray
+
+# Profile a script (creates a .bin file)
+python -m memray run -o output.bin my_script.py
+
+# Generate flame graph (HTML)
+python -m memray flamegraph output.bin
+
+# Generate allocation table (text)
+python -m memray table output.bin
+
+# Find memory leaks (objects that are never freed)
+python -m memray stats output.bin --temporal
+
+# Live view (like top, but for memory)
+python -m memray live 12345   # 12345 = PID
+
+# Profile a specific function in code
+import memray
+
+with memray.Tracker("output.bin"):
+    some_heavy_function()
+
+# Generate report
+# python -m memray flamegraph output.bin --output memory_flamegraph.html
+```
+
+### Reading the memray Flame Graph
+
+```
+Width = total memory allocated
+Color = allocation type (Python heap, malloc, mmap)
+Hover = exact bytes + call path
+
+Look for:
+  - Wide bars at the top = most memory allocated here
+  - Bars that don't shrink = potential leaks
+  - Unexpected large allocations in helper functions
+```
+
+---
+
+## Section 8 — `Austin` — Zero-Overhead Sampling Profiler
+
+Austin is an external frame sampler — it peeks at Python's stack using ptrace/proc
+without instrumenting the code. Zero production overhead.
+
+```bash
+# Install
+pip install austin-dist
+# Or: brew install austin
+
+# Profile by PID (attach to running process)
+austin -p 12345 -i 1000  # 1ms sampling interval
+
+# Profile a script
+austin python my_script.py
+
+# Output to Speedscope format
+austin -f speedscope python my_script.py > profile.json
+# Then: open https://speedscope.app and drag profile.json
+
+# py-spy vs Austin comparison:
+# py-spy:   easier install, sudo not needed, slower sampling
+# Austin:   faster sampling (100μs), lower overhead, more accurate
+# Both:     safe for production, no code changes needed
+```
+
+---
+
+## Section 9 — Profiling in Production (Continuous Profiling)
+
+```python
+# Continuous profiling with Pyroscope (open source)
+# Sends profiles to a Pyroscope server every 10 seconds
+
+# pip install pyroscope-io
+
+import pyroscope
+
+pyroscope.configure(
+    application_name="my-service",
+    server_address="http://pyroscope:4040",
+    tags={
+        "region": "us-east-1",
+        "version": "1.2.0",
+    },
+)
+
+# That's it! Pyroscope profiles in the background and sends to server.
+# Correlate high CPU periods in Grafana with specific code paths.
+
+# Self-hosted Pyroscope via Docker:
+# docker run -p 4040:4040 grafana/pyroscope
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Profile a Slow API Endpoint

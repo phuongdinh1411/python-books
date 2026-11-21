@@ -653,6 +653,143 @@ asyncio.run(main())
 
 ---
 
+## Section 5 — `asyncio.TaskGroup` and `asyncio.timeout` (Python 3.11+)
+
+### `asyncio.TaskGroup` — Structured Concurrency
+
+`TaskGroup` is the modern, safer replacement for `asyncio.gather`. It guarantees
+all tasks are cancelled and awaited if any task raises an exception.
+
+```python
+import asyncio
+
+async def fetch(url: str) -> str:
+    await asyncio.sleep(0.5)
+    return f"data from {url}"
+
+async def risky(n: int) -> int:
+    if n == 2:
+        raise ValueError(f"n={n} failed!")
+    return n * 10
+
+# OLD way (gather): exceptions don't cancel sibling tasks
+async def old_way():
+    results = await asyncio.gather(fetch("a"), fetch("b"), fetch("c"))
+    return results
+
+# NEW way (TaskGroup): if any task fails, ALL are cancelled
+async def new_way():
+    results = []
+    async with asyncio.TaskGroup() as tg:
+        t1 = tg.create_task(fetch("a"))
+        t2 = tg.create_task(fetch("b"))
+        t3 = tg.create_task(fetch("c"))
+    # All tasks complete (or all are cancelled if one fails)
+    return [t1.result(), t2.result(), t3.result()]
+
+asyncio.run(new_way())
+
+# TaskGroup raises ExceptionGroup when any task fails
+async def handle_failure():
+    try:
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(risky(1))
+            tg.create_task(risky(2))   # fails
+            tg.create_task(risky(3))
+    except* ValueError as eg:
+        # except* (Python 3.11) handles ExceptionGroup
+        for exc in eg.exceptions:
+            print(f"Caught: {exc}")
+
+asyncio.run(handle_failure())
+
+# TaskGroup with dynamic tasks
+async def process_many(items: list[str]) -> list[str]:
+    results = {}
+    async with asyncio.TaskGroup() as tg:
+        for item in items:
+            # Can create tasks inside the with block
+            task = tg.create_task(fetch(item))
+            results[item] = task
+    return {k: t.result() for k, t in results.items()}
+```
+
+### `asyncio.timeout()` — Context-Manager Timeouts (3.11+)
+
+```python
+import asyncio
+
+async def slow_db_query() -> str:
+    await asyncio.sleep(5)
+    return "result"
+
+# OLD way
+async def old_timeout():
+    try:
+        result = await asyncio.wait_for(slow_db_query(), timeout=2.0)
+    except asyncio.TimeoutError:
+        print("Query timed out")
+
+# NEW way (more composable, can be shared across multiple awaits)
+async def new_timeout():
+    try:
+        async with asyncio.timeout(2.0):
+            result = await slow_db_query()
+            # Could await multiple things within the same timeout budget
+            other  = await another_query()
+    except asyncio.TimeoutError:
+        print("Query timed out")
+
+# Deadline from an external context (e.g., request deadline)
+async def with_deadline(deadline: float):
+    async with asyncio.timeout_at(deadline):   # absolute time
+        result = await slow_db_query()
+```
+
+---
+
+## Section 6 — `anyio` — Backend-Agnostic Async (Worth Knowing)
+
+`anyio` is an async compatibility layer that works on asyncio AND trio.
+FastAPI and Starlette use it internally.
+
+```bash
+pip install anyio[asyncio,trio]
+```
+
+```python
+import anyio
+
+async def main():
+    # Works identically on asyncio and trio backends
+    async with anyio.create_task_group() as tg:
+        tg.start_soon(fetch_data, "url1")
+        tg.start_soon(fetch_data, "url2")
+
+    # anyio timeout
+    with anyio.fail_after(5):
+        result = await slow_operation()
+
+    # anyio sleep
+    await anyio.sleep(1)
+
+    # anyio thread-to-async bridge (like run_in_executor)
+    result = await anyio.to_thread.run_sync(blocking_function, arg1)
+
+# Run with asyncio backend (default for FastAPI)
+anyio.run(main, backend="asyncio")
+
+# Run with trio backend (for testing or if you prefer trio)
+anyio.run(main, backend="trio")
+
+# Why anyio matters:
+# - FastAPI uses it → understanding anyio helps when writing FastAPI background tasks
+# - Trio has better structured concurrency story than asyncio
+# - anyio bridges the two worlds
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Concurrent Web Scraper

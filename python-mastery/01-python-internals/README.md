@@ -641,6 +641,162 @@ def process_image(path: str):
 
 ---
 
+## Section 9 — `weakref` — Avoid Memory Leaks in Caches
+
+Strong references keep objects alive. `weakref` lets you reference an object without
+preventing garbage collection — perfect for caches and observers.
+
+```python
+import weakref
+import gc
+
+class HeavyObject:
+    def __init__(self, name: str):
+        self.name = name
+        print(f"Created {name}")
+
+    def __del__(self):
+        print(f"Destroyed {self.name}")
+
+# Strong reference — keeps obj alive
+obj = HeavyObject("A")
+strong = obj
+del obj
+gc.collect()
+print(strong.name)  # still alive because strong holds it
+
+# Weak reference — doesn't keep obj alive
+obj = HeavyObject("B")
+weak = weakref.ref(obj)
+print(weak())       # <HeavyObject>
+del obj
+gc.collect()
+print(weak())       # None — object was collected!
+
+# WeakValueDictionary — cache that doesn't prevent GC
+cache: weakref.WeakValueDictionary[str, HeavyObject] = weakref.WeakValueDictionary()
+
+obj_a = HeavyObject("cached_A")
+cache["a"] = obj_a
+
+print("a" in cache)   # True
+del obj_a
+gc.collect()
+print("a" in cache)   # False — entry auto-removed!
+
+# Real use case: observer/callback pattern without memory leaks
+class EventBus:
+    def __init__(self):
+        self._listeners: list[weakref.ref] = []
+
+    def subscribe(self, callback) -> None:
+        self._listeners.append(weakref.ref(callback))
+
+    def emit(self, event: str) -> None:
+        # Clean up dead references and call live ones
+        alive = []
+        for ref in self._listeners:
+            cb = ref()
+            if cb is not None:
+                cb(event)
+                alive.append(ref)
+        self._listeners = alive
+```
+
+---
+
+## Section 10 — `__init_subclass__` — The Clean Alternative to Metaclasses
+
+`__init_subclass__` is called when a class is subclassed. It's simpler than a metaclass
+for most plugin/registry use cases.
+
+```python
+class Plugin:
+    _registry: dict[str, type] = {}
+
+    def __init_subclass__(cls, name: str | None = None, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        key = name or cls.__name__.lower().replace("plugin", "")
+        Plugin._registry[key] = cls
+        print(f"Registered plugin: {key!r}")
+
+class CSVPlugin(Plugin, name="csv"):
+    def process(self, data: str) -> list:
+        return data.split(",")
+
+class JSONPlugin(Plugin, name="json"):
+    def process(self, data: str) -> dict:
+        import json
+        return json.loads(data)
+
+# Auto-registered on class definition:
+print(Plugin._registry)
+# {'csv': <class CSVPlugin>, 'json': <class JSONPlugin>}
+
+plugin = Plugin._registry["csv"]()
+print(plugin.process("a,b,c"))   # ['a', 'b', 'c']
+
+# Validate subclasses on creation
+class Validator:
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        required = ["validate", "serialize"]
+        for method in required:
+            if not hasattr(cls, method):
+                raise TypeError(f"{cls.__name__} must implement {method}()")
+
+class GoodValidator(Validator):
+    def validate(self, x): return True
+    def serialize(self, x): return str(x)
+
+# class BadValidator(Validator):  # raises TypeError immediately!
+#     pass
+```
+
+---
+
+## Section 11 — Python 3.13 Free-Threaded Mode (No GIL)
+
+Python 3.13 introduced experimental free-threaded builds (PEP 703).
+
+```python
+# Check if running free-threaded
+import sys
+print(sys._is_gil_enabled())   # False in free-threaded build
+
+# Install free-threaded Python:
+# uv python install 3.13t   (the 't' suffix = free-threaded)
+# python3.13t -c "import sys; print(sys._is_gil_enabled())"
+
+# In free-threaded mode, CPU-bound threads CAN run in parallel:
+import threading
+import time
+
+def cpu_work(n: int) -> int:
+    return sum(i * i for i in range(n))
+
+# With free-threaded Python, these run on separate cores simultaneously
+threads = [threading.Thread(target=cpu_work, args=(5_000_000,)) for _ in range(4)]
+start = time.perf_counter()
+for t in threads: t.start()
+for t in threads: t.join()
+print(f"Free-threaded: {time.perf_counter() - start:.2f}s")
+# ~4x faster than GIL-locked CPython for CPU-bound work!
+
+# CAUTION: free-threaded Python requires thread-safe code
+# - dict is NOT thread-safe in free-threaded mode
+# - Use threading.Lock() for shared mutable state
+# - Most C extensions need updates to work correctly
+# Production status as of 2024: experimental, not production-ready
+
+# Practical status:
+# - Python 3.12: GIL (default), no free-threaded option
+# - Python 3.13: GIL (default) + experimental free-threaded build (opt-in)
+# - Python 3.14+: working toward stable free-threaded support
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Custom `cached_property`

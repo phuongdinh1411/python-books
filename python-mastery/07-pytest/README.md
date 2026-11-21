@@ -566,6 +566,134 @@ class TestGetTask:
 
 ---
 
+## Section 8 — Parallel Tests with `pytest-xdist`
+
+```bash
+pip install pytest-xdist
+
+# Run tests in 4 parallel processes
+pytest -n 4
+
+# Auto-detect CPU count
+pytest -n auto
+
+# Distribute by test file (better for integration tests)
+pytest -n 4 --dist loadfile
+
+# IMPORTANT: parallel tests need isolated state
+# - Each worker gets its own process → no shared module-level state
+# - Database tests need separate DB schemas or in-memory DBs per worker
+# - Use pytest-xdist worker ID to isolate resources:
+```
+
+```python
+# conftest.py for xdist-safe DB isolation
+import pytest
+
+@pytest.fixture(scope="session")
+def worker_id(request):
+    """Get the pytest-xdist worker ID ('gw0', 'gw1', etc., or 'master')."""
+    return getattr(request.config, "workerinput", {}).get("workerid", "master")
+
+@pytest.fixture(scope="session")
+def test_db_url(worker_id: str) -> str:
+    """Each worker gets its own SQLite database."""
+    return f"sqlite+aiosqlite:///test_{worker_id}.db"
+```
+
+---
+
+## Section 9 — Property-Based Testing with `hypothesis`
+
+`hypothesis` generates hundreds of test cases automatically, finding edge cases you'd never think of.
+
+```bash
+pip install hypothesis
+```
+
+```python
+from hypothesis import given, settings, strategies as st
+
+# Instead of: test with [1, 2, 3] manually
+# hypothesis: generate thousands of integer lists automatically
+
+@given(st.lists(st.integers()))
+def test_sort_is_idempotent(lst: list[int]) -> None:
+    """Sorting twice gives the same result as sorting once."""
+    assert sorted(sorted(lst)) == sorted(lst)
+
+@given(st.text())
+def test_string_encode_decode_roundtrip(s: str) -> None:
+    assert s.encode("utf-8").decode("utf-8") == s
+
+# Composite strategies for domain objects
+@given(
+    st.builds(
+        UserCreate,
+        email=st.emails(),
+        password=st.text(min_size=8, max_size=100),
+        full_name=st.text(min_size=1, max_size=200) | st.none(),
+    )
+)
+async def test_create_user_accepts_valid_data(payload: UserCreate) -> None:
+    result = validate_user(payload)
+    assert result.email == payload.email
+
+# Stateful testing — find bugs in state machines
+from hypothesis.stateful import RuleBasedStateMachine, rule, invariant
+
+class StackMachine(RuleBasedStateMachine):
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+
+    @rule(value=st.integers())
+    def push(self, value: int) -> None:
+        self.stack.append(value)
+
+    @rule()
+    def pop(self) -> None:
+        if self.stack:
+            self.stack.pop()
+
+    @invariant()
+    def stack_length_non_negative(self) -> None:
+        assert len(self.stack) >= 0
+
+TestStack = StackMachine.TestCase
+```
+
+---
+
+## Section 10 — Snapshot Testing
+
+Snapshot tests capture output once and verify it doesn't change — great for
+complex responses, rendered templates, or CLI output.
+
+```bash
+pip install syrupy   # pytest snapshot plugin
+```
+
+```python
+# conftest.py: syrupy is auto-loaded via pytest plugin
+
+# tests/test_api.py
+import pytest
+from syrupy.assertion import SnapshotAssertion
+
+@pytest.mark.asyncio
+async def test_task_list_snapshot(client, snapshot: SnapshotAssertion):
+    response = await client.get("/tasks/")
+    # First run: creates __snapshots__/test_api.ambr
+    # Subsequent runs: compares against saved snapshot
+    assert response.json() == snapshot
+
+# Update snapshots after intentional changes:
+# pytest --snapshot-update
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Parametrize a Parser

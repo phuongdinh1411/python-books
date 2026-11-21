@@ -385,6 +385,125 @@ exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
 
 ---
 
+## Section 9 — PEP 723 — Inline Script Dependencies
+
+Python 3.12+ and `uv` support embedding dependency metadata directly in scripts
+(no `pyproject.toml` needed for single-file scripts).
+
+```python
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "httpx>=0.27",
+#     "rich>=13",
+# ]
+# ///
+"""
+Self-contained script with declared dependencies.
+Run with: uv run my_script.py
+"""
+import httpx
+from rich import print
+
+response = httpx.get("https://httpbin.org/get")
+print(response.json())
+```
+
+```bash
+# uv automatically creates a temporary venv, installs deps, and runs:
+uv run my_script.py
+
+# Share this script — recipient just runs: uv run my_script.py
+# No requirements.txt, no venv setup needed!
+```
+
+---
+
+## Section 10 — `uv` Workspaces (Monorepo)
+
+For monorepos with multiple packages that share a lockfile:
+
+```
+my-monorepo/
+├── pyproject.toml          # workspace root
+├── uv.lock                 # single lockfile for all packages
+├── packages/
+│   ├── core/
+│   │   ├── pyproject.toml
+│   │   └── src/core/
+│   ├── api/
+│   │   ├── pyproject.toml
+│   │   └── src/api/
+│   └── worker/
+│       ├── pyproject.toml
+│       └── src/worker/
+```
+
+```toml
+# Root pyproject.toml
+[tool.uv.workspace]
+members = ["packages/*"]
+
+# Each package declares its own deps in its pyproject.toml
+# but all share the root uv.lock
+```
+
+```bash
+# Install all workspace packages
+uv sync
+
+# Install a specific workspace package
+uv sync --package api
+
+# Run a command in a specific package
+uv run --package api python -m api.main
+
+# Add a dependency to one workspace package
+uv add httpx --package api
+```
+
+---
+
+## Section 11 — `ruff format` — The Formatter
+
+`ruff format` is a Black-compatible formatter, 10–100× faster than Black.
+
+```bash
+# Format all Python files
+ruff format .
+
+# Check only (CI-friendly)
+ruff format --check .
+
+# Show diff without writing
+ruff format --diff .
+```
+
+```toml
+# pyproject.toml formatter config
+[tool.ruff.format]
+quote-style = "double"           # Black default
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true     # format code blocks in docstrings
+docstring-code-line-length = 72
+```
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.0
+    hooks:
+      - id: ruff             # linter
+        args: [--fix]
+      - id: ruff-format      # formatter
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Create and Publish a Package
