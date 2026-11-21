@@ -468,6 +468,171 @@ orders_with_watermark = orders \
 
 ---
 
+## Section 6 — Schema Registry and Avro (Production Kafka)
+
+In production, you should not pass raw JSON over Kafka. Use Avro + Schema Registry
+to enforce schema contracts between producers and consumers.
+
+```bash
+pip install confluent-kafka[avro] fastavro
+```
+
+```python
+# schemas/order_event.avsc
+ORDER_SCHEMA = {
+    "type": "record",
+    "name": "OrderEvent",
+    "namespace": "com.company.ecommerce",
+    "fields": [
+        {"name": "id",          "type": "int"},
+        {"name": "customer_id", "type": "int"},
+        {"name": "status",      "type": "string"},
+        {"name": "total",       "type": "double"},
+        {"name": "event_time",  "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    ]
+}
+
+# producers/avro_producer.py
+from confluent_kafka.avro import AvroProducer
+from confluent_kafka import avro
+
+producer = AvroProducer(
+    {
+        "bootstrap.servers": "localhost:9092",
+        "schema.registry.url": "http://localhost:8081",
+        "enable.idempotence": True,
+    },
+    default_value_schema=avro.loads(str(ORDER_SCHEMA)),
+)
+
+producer.produce(
+    topic="orders",
+    key=str(order["customer_id"]),
+    value={
+        "id": order["id"],
+        "customer_id": order["customer_id"],
+        "status": order["status"],
+        "total": float(order["total"]),
+        "event_time": int(datetime.utcnow().timestamp() * 1000),
+    },
+)
+producer.flush()
+
+# consumers/avro_consumer.py
+from confluent_kafka.avro import AvroConsumer
+
+consumer = AvroConsumer(
+    {
+        "bootstrap.servers": "localhost:9092",
+        "group.id": "order-processor-v2",
+        "schema.registry.url": "http://localhost:8081",
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
+    }
+)
+consumer.subscribe(["orders"])
+
+while True:
+    msg = consumer.poll(1.0)
+    if msg is None:
+        continue
+    if msg.error():
+        print(f"Error: {msg.error()}")
+        continue
+    # msg.value() is already a dict (deserialized from Avro)
+    order = msg.value()
+    print(order["id"], order["status"], order["total"])
+    consumer.commit(asynchronous=False)
+```
+
+---
+
+## Section 7 — Dead-Letter Queue (DLQ) Pattern
+
+When a message fails to process (bad schema, downstream error), never lose it.
+Route it to a DLQ topic for later inspection and replay.
+
+```python
+import json
+import logging
+from confluent_kafka import Producer, Consumer, KafkaException
+
+logger = logging.getLogger(__name__)
+
+DLQ_TOPIC = "orders.dlq"
+
+dlq_producer = Producer({"bootstrap.servers": "localhost:9092"})
+
+def send_to_dlq(msg, error: str, context: dict = {}) -> None:
+    """Route a failed message to the Dead-Letter Queue with error metadata."""
+    dlq_record = {
+        "original_topic":     msg.topic(),
+        "original_partition": msg.partition(),
+        "original_offset":    msg.offset(),
+        "original_key":       msg.key().decode("utf-8") if msg.key() else None,
+        "original_value":     msg.value().decode("utf-8") if msg.value() else None,
+        "error_message":      error,
+        "error_context":      context,
+        "failed_at":          datetime.utcnow().isoformat(),
+    }
+    dlq_producer.produce(
+        topic=DLQ_TOPIC,
+        key=msg.key(),
+        value=json.dumps(dlq_record).encode("utf-8"),
+    )
+    dlq_producer.poll(0)
+    logger.warning("Sent to DLQ: offset=%s error=%s", msg.offset(), error)
+
+
+def process_with_dlq(messages: list) -> None:
+    """Process a batch; send failures to DLQ instead of crashing."""
+    successes, failures = 0, 0
+    for msg in messages:
+        try:
+            record = json.loads(msg.value().decode("utf-8"))
+            # Validate required fields
+            if not record.get("id"):
+                raise ValueError("Missing field: id")
+            if record.get("total", -1) < 0:
+                raise ValueError(f"Negative total: {record['total']}")
+            # Process the valid record
+            save_to_db(record)
+            successes += 1
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            # Recoverable / data error → DLQ
+            send_to_dlq(msg, str(e), {"record": msg.value().decode("utf-8")[:200]})
+            failures += 1
+        except Exception as e:
+            # Unrecoverable / infrastructure error → re-raise (triggers retry)
+            logger.error("Unrecoverable error: %s", e)
+            raise
+
+    logger.info("Batch complete: success=%d dlq=%d", successes, failures)
+
+# DLQ Replay: re-process DLQ messages after fixing the bug
+def replay_dlq(from_timestamp: str) -> None:
+    """Re-process DLQ messages from a given timestamp."""
+    consumer = Consumer({
+        "bootstrap.servers": "localhost:9092",
+        "group.id": "dlq-replay",
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
+    })
+    consumer.subscribe([DLQ_TOPIC])
+    while True:
+        msg = consumer.poll(1.0)
+        if msg is None:
+            break
+        dlq_record = json.loads(msg.value().decode("utf-8"))
+        if dlq_record["failed_at"] >= from_timestamp:
+            original = json.loads(dlq_record["original_value"])
+            save_to_db(original)   # re-process with the fixed code
+            consumer.commit(asynchronous=False)
+    consumer.close()
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Producer + Consumer

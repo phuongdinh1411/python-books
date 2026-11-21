@@ -412,6 +412,109 @@ print(f"Polars: {time.perf_counter() - t:.2f}s")  # Usually 5-20x faster!
 
 ---
 
+## Section 5 — Spark + Delta Lake Integration
+
+```python
+from delta import configure_spark_with_delta_pip
+from delta.tables import DeltaTable
+from pyspark.sql import SparkSession, functions as F
+
+builder = (
+    SparkSession.builder
+    .appName("Delta ETL")
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .config("spark.databricks.delta.schema.autoMerge.enabled", "true")
+)
+spark = configure_spark_with_delta_pip(builder).getOrCreate()
+
+SILVER_PATH = "/data/lake/silver/orders"
+
+# Read new Bronze data
+new_df = spark.read.parquet("/data/lake/bronze/orders/2024/01/15/")
+
+# Clean
+clean_df = (
+    new_df
+    .filter(F.col("id").isNotNull() & (F.col("total") >= 0))
+    .withColumn("status", F.lower(F.trim(F.col("status"))))
+    .withColumn("_silver_at", F.current_timestamp())
+)
+
+# Idempotent MERGE into Delta Silver
+if DeltaTable.isDeltaTable(spark, SILVER_PATH):
+    DeltaTable.forPath(spark, SILVER_PATH).alias("t").merge(
+        clean_df.alias("s"),
+        "t.id = s.id"
+    ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
+else:
+    clean_df.write.format("delta").save(SILVER_PATH)
+
+# Compact + Z-ORDER (run weekly or when files get small)
+spark.sql(f"OPTIMIZE delta.`{SILVER_PATH}` ZORDER BY (customer_id, created_at)")
+
+# Time travel (inspect yesterday's state)
+yesterday = spark.read.format("delta")     .option("timestampAsOf", "2024-01-14")     .load(SILVER_PATH)
+
+# Always stop Spark when done (releases cluster resources)
+spark.stop()
+```
+
+---
+
+## Section 6 — SparkSession Lifecycle and Best Practices
+
+```python
+import atexit
+import logging
+from contextlib import contextmanager
+from pyspark.sql import SparkSession
+
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def spark_session(app_name: str, **extra_configs):
+    """Context manager that guarantees spark.stop() on exit."""
+    builder = SparkSession.builder.appName(app_name)
+    for k, v in extra_configs.items():
+        builder = builder.config(k, v)
+    spark = builder.getOrCreate()
+    spark.sparkContext.setLogLevel("WARN")
+    try:
+        yield spark
+    except Exception as e:
+        logger.error("Spark job failed: %s", e)
+        raise
+    finally:
+        logger.info("Stopping SparkSession for %s", app_name)
+        spark.stop()
+
+# Usage
+with spark_session(
+    "DailyETL",
+    **{"spark.sql.shuffle.partitions": "100",
+       "spark.executor.memory": "4g"}
+) as spark:
+    df = spark.read.parquet("/data/bronze/orders/")
+    df.write.format("delta").mode("append").save("/data/silver/orders/")
+# spark.stop() called automatically
+
+# Checkpoint strategy for long-running jobs
+spark.sparkContext.setCheckpointDir("/tmp/spark-checkpoints")
+
+df_complex = (
+    large_df
+    .groupBy("customer_id").agg(...)
+    .join(another_large_df, "customer_id")
+)
+# Checkpoint before another expensive join to truncate the lineage DAG
+df_complex.checkpoint()  # materialises to disk, breaks lineage
+df_final = df_complex.join(yet_another_df, "id")
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — PySpark ETL Job

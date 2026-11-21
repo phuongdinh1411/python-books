@@ -651,6 +651,87 @@ SELECT DISTINCT customer_id FROM orders WHERE created_at > NOW() - INTERVAL '90 
 
 ---
 
+## Section 9 — LATERAL Joins (Row-by-Row Subqueries)
+
+`LATERAL` lets a subquery reference columns from the outer query row by row.
+It's the SQL equivalent of a `for` loop over rows.
+
+```sql
+-- Top 3 orders per customer (without window functions)
+SELECT c.id, c.full_name, latest.order_id, latest.total
+FROM customers c
+LEFT JOIN LATERAL (
+    SELECT id AS order_id, total
+    FROM orders
+    WHERE customer_id = c.id          -- references outer row!
+    ORDER BY created_at DESC
+    LIMIT 3
+) latest ON TRUE
+ORDER BY c.id, latest.total DESC;
+
+-- LATERAL with a function
+SELECT p.id, kv.key, kv.value
+FROM products p,
+LATERAL jsonb_each_text(p.attributes) AS kv(key, value);  -- expand JSONB per row
+
+-- LATERAL unnest (same as the UNNEST approach, explicit form)
+SELECT post_id, tag
+FROM posts,
+LATERAL UNNEST(tags) AS tag;
+```
+
+---
+
+## Section 10 — FILTER Clause (Conditional Aggregation)
+
+`FILTER` is cleaner and faster than `CASE WHEN ... END` inside aggregates.
+
+```sql
+-- Revenue metrics split by status — one scan of the table
+SELECT
+    DATE_TRUNC('month', created_at)                            AS month,
+    COUNT(*)                                                   AS total_orders,
+    COUNT(*) FILTER (WHERE status = 'completed')               AS completed,
+    COUNT(*) FILTER (WHERE status = 'cancelled')               AS cancelled,
+    SUM(total) FILTER (WHERE status = 'completed')             AS net_revenue,
+    AVG(total) FILTER (WHERE status = 'completed')             AS avg_completed,
+    MAX(total) FILTER (WHERE status = 'completed'
+                         AND total >= 500)                     AS largest_big_order
+FROM orders
+GROUP BY 1
+ORDER BY 1;
+
+-- Equivalent CASE WHEN approach (verbose, old style — avoid)
+-- SUM(CASE WHEN status = 'completed' THEN total END)
+```
+
+---
+
+## Section 11 — Reading EXPLAIN (Early Introduction)
+
+You will study `EXPLAIN ANALYZE` deeply in Pillar 3, but learn to read basic plans now.
+
+```sql
+-- Always run EXPLAIN (ANALYZE, BUFFERS) on slow queries
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT * FROM orders WHERE customer_id = 100;
+
+-- What to look for:
+--   Seq Scan   = reading every row (may need an index)
+--   Index Scan = using an index (good)
+--   cost=X..Y  = planner estimate (startup_cost..total_cost)
+--   actual time=X..Y rows=N  = measured real execution
+--   Buffers: hit=N read=N    = N pages from cache, N from disk
+
+-- Example output to recognise:
+--   Seq Scan on orders  (cost=0.00..2500.00 rows=100000 ...)
+--      Filter: (customer_id = 100)
+--      Rows Removed by Filter: 99900   <- BAD: scanning 100k rows for ~100 results
+-- Fix: CREATE INDEX idx_orders_customer ON orders(customer_id);
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Sales Report

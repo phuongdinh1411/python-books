@@ -1159,6 +1159,135 @@ spark.sql("""
 
 ---
 
+## 19. Apache Hudi — The Third Table Format
+
+No complete comparison is production-grade without mentioning **Apache Hudi** (Hadoop Upserts Deletes and Incrementals), created at Uber in 2016.
+
+### Hudi Key Concepts
+
+```
+Hudi table types:
+  Copy-On-Write (COW): rewrites Parquet files on every write
+                       → Fast reads, slow writes
+                       → Like Delta Lake and Iceberg default
+
+  Merge-On-Read (MOR): writes small delta log files, merges lazily on read
+                       → Fast writes, slightly slower reads (compaction needed)
+                       → Unique to Hudi — great for high-frequency CDC
+
+Hudi record key: every record needs a primary key (like a DB table)
+Hudi partition: standard partition-by-column approach (like Delta)
+```
+
+```python
+from pyspark.sql import SparkSession, functions as F
+
+spark = SparkSession.builder     .appName("HudiWrite")     .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")     .config("spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.hudi.catalog.HoodieCatalog")     .getOrCreate()
+
+# Write to Hudi (MOR table — fast writes, good for CDC)
+hudi_options = {
+    "hoodie.table.name": "orders",
+    "hoodie.datasource.write.recordkey.field": "id",
+    "hoodie.datasource.write.partitionpath.field": "country",
+    "hoodie.datasource.write.table.type": "MERGE_ON_READ",
+    "hoodie.datasource.write.operation": "upsert",
+    "hoodie.datasource.write.precombine.field": "updated_at",
+    # Compaction (merge log files into Parquet periodically)
+    "hoodie.compact.inline": "false",          # run compaction async
+    "hoodie.compact.inline.max.delta.commits": "5",
+    # Cleaner (remove old file versions)
+    "hoodie.cleaner.commits.retained": "10",
+}
+
+df.write     .format("hudi")     .options(**hudi_options)     .mode("append")     .save("s3://bucket/hudi/orders/")
+
+# Read (always reads latest snapshot)
+spark.read.format("hudi").load("s3://bucket/hudi/orders/").show()
+
+# Incremental read (only records changed since a commit)
+spark.read.format("hudi")     .option("hoodie.datasource.query.type", "incremental")     .option("hoodie.datasource.read.begin.instanttime", "20240101000000")     .load("s3://bucket/hudi/orders/")     .show()
+
+# Time travel
+spark.read.format("hudi")     .option("as.of.instant", "20240115120000")     .load("s3://bucket/hudi/orders/")     .show()
+```
+
+### Three-Way Comparison: Delta Lake vs Iceberg vs Hudi
+
+| Feature | Delta Lake | Apache Iceberg | Apache Hudi |
+|---------|-----------|----------------|-------------|
+| Created by | Databricks | Netflix | Uber |
+| Table types | COW only | COW only | COW + **MOR** |
+| Fast high-freq writes | Moderate | Moderate | **Best** (MOR) |
+| Partition evolution | ❌ Rewrite | ✅ Zero-copy | ❌ Rewrite |
+| Hidden partitioning | ❌ | ✅ | ❌ |
+| Schema evolution | ✅ Good | ✅ Best | ✅ Good |
+| Time travel | ✅ | ✅ | ✅ |
+| CDC / incremental read | ✅ CDF | ✅ Incremental scan | **✅ Native incremental** |
+| Multi-engine support | Moderate | ✅ Best | Moderate |
+| Snowflake native | ❌ | ✅ | ❌ |
+| Compaction needed | No | No | Yes (MOR) |
+| Primary key required | No | No | **Yes** |
+| AWS Athena native | No | ✅ | Workaround |
+| Flink streaming | Good | **Best** | Good |
+| Best for | Databricks shops | Multi-engine / cloud | High-freq CDC / Uber-scale |
+
+### When to Choose Hudi
+
+```
+Choose Apache Hudi if:
+  ✅ Very high write frequency (10M+ upserts/hour)
+  ✅ You need native incremental CDC reads (MOR streaming source)
+  ✅ You are on AWS EMR (AWS has strong Hudi support)
+  ✅ Your records always have a primary key
+  ✅ You are coming from a Hudi-using organisation (Uber, Robinhood, etc.)
+  ✅ You need COW → MOR flexibility per table
+
+Do NOT choose Hudi if:
+  ❌ You need Snowflake or BigQuery native reads
+  ❌ You need hidden partitioning or partition evolution
+  ❌ Your records do not have stable primary keys
+  ❌ You are Databricks-first (Delta is better integrated)
+```
+
+---
+
+## 20. Apache Paimon (Emerging Format — Worth Knowing)
+
+Apache Paimon (originally Flink Table Store) is designed for **streaming-first** data lakes
+with Flink as the primary write engine.
+
+```
+Key differentiators:
+  - Native Flink table format (best-in-class Flink integration)
+  - Streaming upserts with sub-minute latency (better than Iceberg + Flink)
+  - Lookup tables: fast key-value lookups from Flink streaming jobs
+  - Level-based LSM (Log-Structured Merge Tree) storage for fast writes
+  - Full CDC support natively
+
+Best for:
+  - Flink-native streaming pipelines
+  - Real-time data lakes (latency < 1 minute)
+  - Organisations already deep in Flink (Alibaba, ByteDance, etc.)
+
+Not yet production-ready for:
+  - Multi-engine reads (Spark/Trino support is newer and less stable)
+  - Snowflake or BigQuery native reads (not supported)
+```
+
+### Updated Decision Matrix (All Four Formats)
+
+```
+Choose DELTA LAKE if:   Databricks + Photon + Unity Catalog
+Choose ICEBERG if:      Multi-cloud, Snowflake/Athena, partition evolution
+Choose HUDI if:         High-frequency CDC, MOR tables, AWS EMR
+Choose PAIMON if:       Flink-native streaming, sub-minute latency
+
+If in doubt and starting fresh: Apache Iceberg is the safest vendor-neutral choice.
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Delta Lake Time Travel Audit

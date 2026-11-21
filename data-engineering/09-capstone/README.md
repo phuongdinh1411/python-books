@@ -1502,6 +1502,175 @@ clean:         ## Remove compiled Python + cache files
 
 ---
 
+## `pyproject.toml`
+
+```toml
+[project]
+name = "data-platform"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    # Orchestration
+    "apache-airflow[postgres]>=2.9",
+    "apache-airflow-providers-postgres>=5.10",
+    # Streaming
+    "confluent-kafka[avro]>=2.4",
+    # Batch + Delta Lake
+    "pyspark>=3.5",
+    "delta-spark>=3.1",
+    # Transformation
+    "dbt-postgres>=1.8",
+    # Analytics
+    "duckdb>=1.0",
+    "polars>=1.0",
+    "pandas>=2.0",
+    "pyarrow>=16",
+    # Data Quality
+    "great-expectations>=0.18",
+    # Utilities
+    "psycopg2-binary>=2.9",
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+```
+
+---
+
+## `.env.example`
+
+```bash
+# Copy to .env and fill in values
+# Never commit .env to git!
+
+# Source database
+SOURCE_POSTGRES_HOST=localhost
+SOURCE_POSTGRES_PORT=5432
+SOURCE_POSTGRES_DB=ecommerce
+SOURCE_POSTGRES_USER=postgres
+SOURCE_POSTGRES_PASSWORD=password
+
+# Data warehouse
+DW_POSTGRES_HOST=localhost
+DW_POSTGRES_PORT=5433
+DW_POSTGRES_DB=data_warehouse
+DW_POSTGRES_USER=dw_user
+DW_POSTGRES_PASSWORD=dw_password
+
+# Kafka
+KAFKA_BROKERS=localhost:9092
+SCHEMA_REGISTRY_URL=http://localhost:8081
+
+# Lake path (local dev) or S3 URI (production)
+LAKE_PATH=/data/lake
+# LAKE_PATH=s3://my-bucket/data/lake
+
+# AWS (only needed if LAKE_PATH is S3)
+# AWS_ACCESS_KEY_ID=AKIA...
+# AWS_SECRET_ACCESS_KEY=...
+# AWS_DEFAULT_REGION=us-east-1
+
+# Airflow
+AIRFLOW_ADMIN_USER=admin
+AIRFLOW_ADMIN_PASSWORD=admin
+```
+
+---
+
+## Step 11 — Monitoring and Observability
+
+```python
+# monitoring/consumer_lag.py
+"""
+Poll Kafka consumer lag every 30 seconds.
+Alert (log ERROR + optionally send to PagerDuty) if lag > threshold.
+"""
+from __future__ import annotations
+
+import logging
+import time
+from confluent_kafka import Consumer, TopicPartition
+from confluent_kafka.admin import AdminClient
+
+logger = logging.getLogger(__name__)
+
+LAG_ALERT_THRESHOLD = 10_000   # alert if any partition > 10k messages behind
+
+def get_lag(group_id: str, topics: list[str]) -> dict[str, int]:
+    admin = AdminClient({"bootstrap.servers": "localhost:9092"})
+    consumer = Consumer({
+        "bootstrap.servers": "localhost:9092",
+        "group.id": group_id,
+    })
+    lag = {}
+    for topic in topics:
+        meta = admin.list_topics(topic).topics[topic]
+        partitions = [TopicPartition(topic, p) for p in meta.partitions]
+        committed = consumer.committed(partitions, timeout=10)
+        for tp in partitions:
+            low, high = consumer.get_watermark_offsets(tp, timeout=10)
+            committed_offset = committed[partitions.index(tp)].offset
+            partition_lag = high - (committed_offset if committed_offset >= 0 else 0)
+            lag[f"{topic}[{tp.partition}]"] = partition_lag
+    consumer.close()
+    return lag
+
+def run_lag_monitor() -> None:
+    while True:
+        try:
+            lag = get_lag("cdc-bronze-writer-v1", ["ecommerce.public.orders"])
+            for key, l in lag.items():
+                if l > LAG_ALERT_THRESHOLD:
+                    logger.error("HIGH_LAG partition=%s lag=%d threshold=%d", key, l, LAG_ALERT_THRESHOLD)
+                else:
+                    logger.info("lag_ok partition=%s lag=%d", key, l)
+        except Exception as e:
+            logger.warning("lag_check_failed: %s", e)
+        time.sleep(30)
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    run_lag_monitor()
+```
+
+```makefile
+# Add to Makefile:
+monitor-lag:   ## Monitor Kafka consumer lag (press Ctrl+C to stop)
+	uv run python monitoring/consumer_lag.py
+
+airflow-logs:  ## Tail Airflow scheduler logs
+	docker logs -f dp_airflow
+
+pipeline-status: ## Show status of all Airflow DAGs
+	docker exec dp_airflow airflow dags list-runs --dag-id bronze_ingestion_daily | head -20
+	docker exec dp_airflow airflow dags list-runs --dag-id silver_processing_daily | head -20
+	docker exec dp_airflow airflow dags list-runs --dag-id gold_dbt_run_daily | head -20
+```
+
+---
+
 ## ✅ Production Checklist
 
 ### Ingestion & Reliability

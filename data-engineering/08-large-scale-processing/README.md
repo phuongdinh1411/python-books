@@ -354,6 +354,153 @@ CREATE TABLE orders_p3 PARTITION OF orders FOR VALUES WITH (MODULUS 4, REMAINDER
 
 ---
 
+## Section 6 — Compaction Scheduling and File Management SLA
+
+```python
+# airflow/dags/delta_maintenance.py
+"""
+Weekly Delta Lake maintenance: OPTIMIZE + ZORDER + VACUUM.
+Run off-peak hours to avoid impacting query performance.
+"""
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+from pathlib import Path
+
+from airflow.decorators import dag, task
+
+SILVER_TABLES = [
+    "/data/lake/silver/orders",
+    "/data/lake/silver/customers",
+    "/data/lake/silver/products",
+]
+
+@dag(
+    dag_id="delta_maintenance_weekly",
+    schedule="0 2 * * 0",   # 2 AM every Sunday
+    start_date=datetime(2024, 1, 1),
+    catchup=False,
+    default_args={"owner": "data-engineering", "retries": 1},
+    tags=["maintenance", "delta", "weekly"],
+)
+def delta_maintenance():
+
+    @task
+    def optimize_and_zorder(table_path: str) -> dict:
+        """Compact small files and Z-ORDER by common filter columns."""
+        import subprocess
+        result = subprocess.run(
+            [
+                "spark-submit",
+                "--packages", "io.delta:delta-spark_2.12:3.1.0",
+                "-e",
+                f"""
+                from delta.tables import DeltaTable
+                from pyspark.sql import SparkSession
+                from delta import configure_spark_with_delta_pip
+                spark = configure_spark_with_delta_pip(
+                    SparkSession.builder.appName("Maintenance")
+                    .config("spark.sql.extensions",
+                            "io.delta.sql.DeltaSparkSessionExtension")
+                    .config("spark.sql.catalog.spark_catalog",
+                            "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                ).getOrCreate()
+                spark.sql("OPTIMIZE delta.`{table_path}` ZORDER BY (created_at)")
+                spark.stop()
+                """
+            ],
+            capture_output=True, text=True, check=False
+        )
+        return {"table": table_path, "success": result.returncode == 0}
+
+    @task
+    def vacuum_old_files(table_path: str) -> None:
+        """Remove files older than 7 days (keeps time-travel for 7d)."""
+        import subprocess
+        subprocess.run(
+            ["spark-submit", "--packages", "io.delta:delta-spark_2.12:3.1.0",
+             "-e", f"""
+             from delta.tables import DeltaTable
+             from pyspark.sql import SparkSession
+             from delta import configure_spark_with_delta_pip
+             spark = configure_spark_with_delta_pip(
+                 SparkSession.builder.appName("Vacuum")
+                 .config("spark.sql.extensions",
+                         "io.delta.sql.DeltaSparkSessionExtension")
+                 .config("spark.databricks.delta.retentionDurationCheck.enabled", "false")
+             ).getOrCreate()
+             dt = DeltaTable.forPath(spark, "{table_path}")
+             dt.vacuum(retentionHours=168)   # 7 days
+             spark.stop()
+             """],
+            check=True
+        )
+
+    # Run maintenance for each table (sequential to limit resource usage)
+    for table in SILVER_TABLES:
+        optimize_and_zorder(table) >> vacuum_old_files(table)
+
+delta_maintenance_dag = delta_maintenance()
+```
+
+**Compaction SLA guidelines:**
+
+| Table write pattern | Optimize frequency | VACUUM retention |
+|---------------------|--------------------|-----------------|
+| Appended hourly (CDC) | Daily | 7 days |
+| Appended daily (batch) | Weekly | 7 days |
+| Heavily updated (MERGE) | Daily | 7 days |
+| Rarely written | Monthly | 30 days |
+
+---
+
+## Section 7 — Data Lineage (Concept + Tools)
+
+Data lineage answers: *"Where did this data come from and what transformations touched it?"*
+
+```
+lineage example:
+  raw_orders (PostgreSQL)
+      ↓ Debezium CDC
+  bronze/orders (Delta Lake)
+      ↓ bronze_to_silver PySpark job
+  silver/orders (Delta Lake)
+      ↓ dbt stg_orders model
+  staging.stg_orders (PostgreSQL DW)
+      ↓ dbt fct_orders incremental model
+  marts.fct_orders (PostgreSQL DW)
+      ↓ BI tool query
+  Revenue Dashboard
+```
+
+**Tools for lineage tracking:**
+
+| Tool | Type | Free? | Notes |
+|------|------|-------|-------|
+| dbt built-in lineage | DAG graph in `dbt docs` | ✅ Free | Model-level lineage across dbt |
+| Apache Atlas | Open source | ✅ Free | Column-level lineage, metadata governance |
+| OpenLineage | Standard (not a tool) | ✅ Free | Emit lineage events from Airflow/Spark |
+| Marquez | OpenLineage backend | ✅ Free | Visualise lineage from OpenLineage events |
+| DataHub | Open source | ✅ Free | LinkedIn's data catalog + lineage |
+| Atlan / Alation | Commercial | ❌ Paid | Enterprise data catalog |
+
+```python
+# OpenLineage integration with Airflow (emit lineage events automatically)
+# In airflow.cfg:
+# [lineage]
+# backend = airflow.lineage.backend.atlas.AtlasBackend
+
+# Or use the Marquez backend:
+# pip install openlineage-airflow
+# OPENLINEAGE_URL=http://marquez:5000 airflow scheduler
+
+# dbt emits OpenLineage events natively (dbt 1.6+):
+# dbt run --event-time-start 2024-01-01 --select fct_orders
+# → emits START, COMPLETE events to OpenLineage API
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Bronze → Silver Pipeline

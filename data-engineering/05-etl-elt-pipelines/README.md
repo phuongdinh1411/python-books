@@ -539,6 +539,166 @@ class PaginatedExtractor:
 
 ---
 
+## Section 5 — Airflow Sensors and Triggers
+
+```python
+# sensors/wait_for_upstream.py
+from airflow.sensors.filesystem import FileSensor
+from airflow.sensors.sql import SqlSensor
+from airflow.providers.http.sensors.http import HttpSensor
+from airflow.decorators import dag, task
+from datetime import datetime, timedelta
+
+@dag(schedule="0 3 * * *", start_date=datetime(2024, 1, 1), catchup=False)
+def sensor_examples():
+
+    # 1. Wait for a file to appear (e.g., upstream partner drops a CSV)
+    wait_for_file = FileSensor(
+        task_id="wait_for_csv",
+        filepath="/data/incoming/orders_{{ ds }}.csv",
+        poke_interval=60,          # check every 60 seconds
+        timeout=3600,              # give up after 1 hour
+        mode="reschedule",         # release worker slot while waiting (production pattern)
+        soft_fail=False,
+    )
+
+    # 2. Wait until a SQL condition is true (e.g., upstream table refreshed)
+    wait_for_data = SqlSensor(
+        task_id="wait_for_upstream_load",
+        conn_id="source_postgres",
+        sql="""
+            SELECT COUNT(*) > 0
+            FROM orders
+            WHERE DATE(updated_at) = '{{ ds }}'
+              AND status = 'completed'
+        """,
+        poke_interval=120,
+        timeout=7200,
+        mode="reschedule",
+    )
+
+    # 3. Wait for an external API to become healthy
+    wait_for_api = HttpSensor(
+        task_id="wait_for_api",
+        http_conn_id="source_api",
+        endpoint="/health",
+        poke_interval=30,
+        timeout=600,
+        mode="reschedule",
+    )
+
+    @task
+    def process():
+        pass
+
+    wait_for_file >> wait_for_data >> wait_for_api >> process()
+```
+
+> ⚠️ **XCom Size Warning:** XComs are stored in the Airflow metadata database.
+> Never pass large DataFrames or lists of thousands of records via XCom.
+> Pass only paths, row counts, and metadata. Load data from storage instead.
+
+```python
+# BAD: passing a large list via XCom (will slow down the metadata DB)
+@task
+def extract() -> list[dict]:
+    return [row for row in fetch_1_million_rows()]  # DON'T DO THIS
+
+# GOOD: write to storage, pass the path
+@task
+def extract(**context) -> str:
+    date = context["ds"]
+    path = f"/data/bronze/orders/{date}/batch.parquet"
+    df = fetch_orders(date)
+    df.to_parquet(path)
+    return path  # pass path, not data
+
+@task
+def transform(parquet_path: str) -> str:
+    df = pd.read_parquet(parquet_path)
+    # ... transform ...
+    out_path = parquet_path.replace("bronze", "silver")
+    df.to_parquet(out_path)
+    return out_path
+```
+
+---
+
+## Section 6 — dbt Snapshots (SCD Type 2)
+
+dbt has a built-in feature for Slowly Changing Dimensions.
+
+```sql
+-- snapshots/snap_customers.sql
+{% snapshot snap_customers %}
+{{
+    config(
+        target_schema = 'snapshots',
+        unique_key     = 'customer_id',
+        strategy       = 'timestamp',
+        updated_at     = 'updated_at',
+    )
+}}
+SELECT
+    id AS customer_id,
+    full_name,
+    email,
+    country,
+    segment,
+    updated_at
+FROM {{ source('ecommerce', 'customers') }}
+{% endsnapshot %}
+```
+
+```bash
+dbt snapshot   # creates/updates the snapshot table
+# dbt adds:
+#   dbt_scd_id       -- unique key for this version
+#   dbt_updated_at   -- when this record was last seen
+#   dbt_valid_from   -- when this version became active
+#   dbt_valid_to     -- when this version was superseded (NULL = current)
+#   dbt_is_deleted   -- TRUE if the row was deleted in source
+```
+
+```sql
+-- Query: what country was customer 42 in on 2024-03-01?
+SELECT country
+FROM snapshots.snap_customers
+WHERE customer_id = 42
+  AND '2024-03-01'::DATE BETWEEN dbt_valid_from::DATE
+      AND COALESCE(dbt_valid_to::DATE, '9999-12-31'::DATE);
+```
+
+---
+
+## Section 7 — dbt Seeds (Small Reference Data)
+
+```csv
+-- seeds/country_codes.csv
+country_code,country_name,region
+US,United States,Americas
+UK,United Kingdom,Europe
+DE,Germany,Europe
+JP,Japan,Asia
+SG,Singapore,Asia
+```
+
+```bash
+dbt seed   # loads CSV into a table in your DW
+```
+
+```sql
+-- models/staging/stg_orders_with_region.sql
+SELECT
+    o.*,
+    cc.country_name,
+    cc.region
+FROM {{ ref('stg_orders') }} o
+LEFT JOIN {{ ref('country_codes') }} cc ON o.country = cc.country_code
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Airflow DAG

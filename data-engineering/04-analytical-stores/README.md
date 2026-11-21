@@ -455,6 +455,108 @@ FROM orders o, UNNEST(o.items) AS item;
 
 ---
 
+## Section 6 — DuckDB Advanced: ATTACH, COPY, and S3
+
+```python
+import duckdb
+
+con = duckdb.connect("analytics.duckdb")
+
+# ATTACH another DuckDB or SQLite file (joins across databases!)
+con.execute("ATTACH 'other.duckdb' AS other_db")
+con.execute("""
+    SELECT a.*, b.extra_col
+    FROM orders a
+    JOIN other_db.ref_table b ON a.id = b.id
+""")
+
+# ATTACH a PostgreSQL database (read-only via postgres scanner)
+con.execute("""
+    INSTALL postgres;
+    LOAD postgres;
+    ATTACH 'host=localhost dbname=ecommerce user=de password=de' AS pg (TYPE postgres);
+""")
+result = con.execute("SELECT * FROM pg.orders LIMIT 10").df()
+
+# COPY TO — export results to files
+con.execute("""
+    COPY (
+        SELECT country, SUM(total) AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY country
+        ORDER BY revenue DESC
+    ) TO 'revenue_by_country.parquet' (FORMAT PARQUET, COMPRESSION SNAPPY)
+""")
+
+con.execute("""
+    COPY (SELECT * FROM orders LIMIT 10000)
+    TO 'sample.csv' (FORMAT CSV, HEADER TRUE)
+""")
+
+# S3 access with credentials
+con.execute("""
+    INSTALL httpfs; LOAD httpfs;
+    SET s3_region = 'us-east-1';
+    SET s3_access_key_id = 'AKIA...';
+    SET s3_secret_access_key = '...';
+    -- Or use IAM role on EC2/ECS (no keys needed):
+    SET s3_use_ssl = true;
+""")
+
+# Query S3 directly (no download!)
+df = con.execute("""
+    SELECT status, COUNT(*), SUM(total)
+    FROM read_parquet('s3://my-bucket/data/orders/*.parquet')
+    WHERE created_at >= '2024-01-01'
+    GROUP BY status
+""").df()
+```
+
+---
+
+## Section 7 — When to Use DuckDB vs Polars vs Pandas
+
+```
+┌────────────────┬───────────────────────────────┬──────────────────────────────┐
+│                │ Best for                      │ Avoid when                   │
+├────────────────┼───────────────────────────────┼──────────────────────────────┤
+│ DuckDB         │ SQL analytics, Parquet/S3,    │ Row-by-row mutation, complex  │
+│                │ joining across files/DBs,     │ Python logic per row          │
+│                │ fast ad-hoc queries           │                              │
+├────────────────┼───────────────────────────────┼──────────────────────────────┤
+│ Polars         │ Pipeline transformations in   │ Ad-hoc SQL, joining across   │
+│                │ Python code, lazy evaluation, │ multiple file sources        │
+│                │ streaming large CSVs          │                              │
+├────────────────┼───────────────────────────────┼──────────────────────────────┤
+│ Pandas         │ Small data (<1M rows),        │ Large data, performance-     │
+│                │ compatibility with ML libs    │ critical transforms          │
+└────────────────┴───────────────────────────────┴──────────────────────────────┘
+
+Rule of thumb:
+  - Writing SQL? → DuckDB
+  - Writing Python transforms in a pipeline? → Polars (lazy mode)
+  - Interfacing with scikit-learn / statsmodels? → Pandas (convert at the end)
+  - Data > single machine RAM? → Spark (Pillar 6)
+```
+
+```python
+# Interop: DuckDB ↔ Polars ↔ Pandas (zero-copy via Arrow)
+import duckdb, polars as pl, pandas as pd
+
+# Polars → DuckDB
+df_pl = pl.read_parquet("orders.parquet")
+result = duckdb.execute("SELECT status, SUM(total) FROM df_pl GROUP BY status").df()
+
+# DuckDB → Polars
+result_pl = duckdb.execute("SELECT * FROM read_parquet('orders.parquet')").pl()
+
+# DuckDB → Pandas
+result_pd = duckdb.execute("SELECT * FROM orders LIMIT 1000").df()
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — DuckDB Analytics

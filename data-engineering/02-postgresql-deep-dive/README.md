@@ -531,6 +531,114 @@ min_pool_size = 5
 
 ---
 
+## Section 7 — Monitoring Live Queries and Locks
+
+### pg_stat_activity — See What's Running Right Now
+
+```sql
+-- Active queries right now
+SELECT
+    pid,
+    usename,
+    application_name,
+    state,                    -- active, idle, idle in transaction
+    wait_event_type,
+    wait_event,
+    ROUND(EXTRACT(EPOCH FROM (NOW() - query_start))::numeric, 1) AS runtime_sec,
+    LEFT(query, 100) AS query_snippet
+FROM pg_stat_activity
+WHERE state != 'idle'
+ORDER BY runtime_sec DESC NULLS LAST;
+
+-- Kill a runaway query (use pid from above)
+SELECT pg_cancel_backend(12345);    -- sends SIGINT (graceful)
+SELECT pg_terminate_backend(12345); -- sends SIGTERM (hard kill)
+```
+
+### pg_locks — Detect Lock Contention
+
+```sql
+-- Find blocking locks
+SELECT
+    blocked.pid     AS blocked_pid,
+    blocked.query   AS blocked_query,
+    blocking.pid    AS blocking_pid,
+    blocking.query  AS blocking_query,
+    blocked_activity.wait_event_type,
+    blocked_activity.wait_event
+FROM pg_locks blocked
+JOIN pg_stat_activity blocked_activity ON blocked.pid = blocked_activity.pid
+JOIN pg_locks blocking
+    ON blocking.granted = TRUE
+   AND blocked.relation = blocking.relation
+   AND blocked.pid != blocking.pid
+JOIN pg_stat_activity blocking_activity ON blocking.pid = blocking_activity.pid
+WHERE NOT blocked.granted;
+
+-- Lock types to know:
+-- AccessShareLock      -- SELECT
+-- RowShareLock         -- SELECT FOR UPDATE
+-- RowExclusiveLock     -- INSERT, UPDATE, DELETE
+-- ShareUpdateExclusiveLock -- VACUUM, ANALYZE, CREATE INDEX CONCURRENTLY
+-- AccessExclusiveLock  -- DROP TABLE, ALTER TABLE, LOCK TABLE (blocks everything!)
+```
+
+### auto_explain — Log Slow Query Plans Automatically
+
+```sql
+-- Add to postgresql.conf (or SET for one session):
+-- shared_preload_libraries = 'auto_explain'
+
+-- Session-level (test without restart):
+LOAD 'auto_explain';
+SET auto_explain.log_min_duration = '500ms';  -- log plans for queries > 500ms
+SET auto_explain.log_analyze = ON;
+SET auto_explain.log_buffers = ON;
+SET auto_explain.log_nested_statements = ON;
+
+-- Now any slow query will log its full EXPLAIN ANALYZE to PostgreSQL log
+-- grep 'Query Text' /var/log/postgresql/postgresql.log
+```
+
+---
+
+## Section 8 — Replication Concepts (Read for Interviews)
+
+```
+Streaming Replication (Physical):
+  Primary → WAL stream → Standby (bit-for-bit copy)
+  Use case: HA failover, read replicas
+  Lag check: SELECT * FROM pg_stat_replication;
+
+Logical Replication:
+  Primary → logical decoding → Subscriber
+  Use case: selective table replication, zero-downtime migrations, CDC (Debezium)
+  Lag check: SELECT * FROM pg_replication_slots;
+```
+
+```sql
+-- Check replication lag on primary
+SELECT
+    client_addr,
+    state,
+    sent_lsn,
+    write_lsn,
+    flush_lsn,
+    replay_lsn,
+    ROUND(EXTRACT(EPOCH FROM write_lag)::numeric, 3) AS write_lag_sec,
+    ROUND(EXTRACT(EPOCH FROM replay_lag)::numeric, 3) AS replay_lag_sec
+FROM pg_stat_replication;
+
+-- Check replication slots (logical)
+SELECT slot_name, plugin, active, restart_lsn,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS lag_size
+FROM pg_replication_slots;
+-- WARNING: unused slots block WAL cleanup -> disk can fill up!
+-- Drop stale slots: SELECT pg_drop_replication_slot('slot_name');
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Index Design
@@ -576,3 +684,111 @@ run VACUUM, and verify cleanup in `pg_stat_user_tables`.
 - https://www.postgresql.org/docs/current/datatype-json.html
 - https://explain.depesz.com/   ← paste EXPLAIN output for visualization
 - https://pganalyze.com/blog
+---
+
+## Section 7 — Monitoring Live Queries and Locks
+
+### pg_stat_activity — See What's Running Right Now
+
+```sql
+-- Active queries right now
+SELECT
+    pid,
+    usename,
+    application_name,
+    state,                    -- active, idle, idle in transaction
+    wait_event_type,
+    wait_event,
+    ROUND(EXTRACT(EPOCH FROM (NOW() - query_start))::numeric, 1) AS runtime_sec,
+    LEFT(query, 100) AS query_snippet
+FROM pg_stat_activity
+WHERE state != 'idle'
+ORDER BY runtime_sec DESC NULLS LAST;
+
+-- Kill a runaway query (use pid from above)
+SELECT pg_cancel_backend(12345);    -- sends SIGINT (graceful)
+SELECT pg_terminate_backend(12345); -- sends SIGTERM (hard kill)
+```
+
+### pg_locks — Detect Lock Contention
+
+```sql
+-- Find blocking locks
+SELECT
+    blocked.pid     AS blocked_pid,
+    blocked.query   AS blocked_query,
+    blocking.pid    AS blocking_pid,
+    blocking.query  AS blocking_query,
+    blocked_activity.wait_event_type,
+    blocked_activity.wait_event
+FROM pg_locks blocked
+JOIN pg_stat_activity blocked_activity ON blocked.pid = blocked_activity.pid
+JOIN pg_locks blocking
+    ON blocking.granted = TRUE
+   AND blocked.relation = blocking.relation
+   AND blocked.pid != blocking.pid
+JOIN pg_stat_activity blocking_activity ON blocking.pid = blocking_activity.pid
+WHERE NOT blocked.granted;
+
+-- Lock types to know:
+-- AccessShareLock      -- SELECT
+-- RowShareLock         -- SELECT FOR UPDATE
+-- RowExclusiveLock     -- INSERT, UPDATE, DELETE
+-- ShareUpdateExclusiveLock -- VACUUM, ANALYZE, CREATE INDEX CONCURRENTLY
+-- AccessExclusiveLock  -- DROP TABLE, ALTER TABLE, LOCK TABLE (blocks everything!)
+```
+
+### auto_explain — Log Slow Query Plans Automatically
+
+```sql
+-- Add to postgresql.conf (or SET for one session):
+-- shared_preload_libraries = 'auto_explain'
+
+-- Session-level (test without restart):
+LOAD 'auto_explain';
+SET auto_explain.log_min_duration = '500ms';  -- log plans for queries > 500ms
+SET auto_explain.log_analyze = ON;
+SET auto_explain.log_buffers = ON;
+SET auto_explain.log_nested_statements = ON;
+
+-- Now any slow query will log its full EXPLAIN ANALYZE to PostgreSQL log
+-- grep 'Query Text' /var/log/postgresql/postgresql.log
+```
+
+---
+
+## Section 8 — Replication Concepts (Read for Interviews)
+
+```
+Streaming Replication (Physical):
+  Primary → WAL stream → Standby (bit-for-bit copy)
+  Use case: HA failover, read replicas
+  Lag check: SELECT * FROM pg_stat_replication;
+
+Logical Replication:
+  Primary → logical decoding → Subscriber
+  Use case: selective table replication, zero-downtime migrations, CDC (Debezium)
+  Lag check: SELECT * FROM pg_replication_slots;
+```
+
+```sql
+-- Check replication lag on primary
+SELECT
+    client_addr,
+    state,
+    sent_lsn,
+    write_lsn,
+    flush_lsn,
+    replay_lsn,
+    ROUND(EXTRACT(EPOCH FROM write_lag)::numeric, 3) AS write_lag_sec,
+    ROUND(EXTRACT(EPOCH FROM replay_lag)::numeric, 3) AS replay_lag_sec
+FROM pg_stat_replication;
+
+-- Check replication slots (logical)
+SELECT slot_name, plugin, active, restart_lsn,
+       pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS lag_size
+FROM pg_replication_slots;
+-- WARNING: unused slots block WAL cleanup -> disk can fill up!
+-- Drop stale slots: SELECT pg_drop_replication_slot('slot_name');
+```
+

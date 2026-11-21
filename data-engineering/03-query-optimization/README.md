@@ -352,6 +352,83 @@ ALTER TABLE orders SET (
 
 ---
 
+## Section 8 — Parallel Query Tuning
+
+PostgreSQL can use multiple CPUs for a single query since version 9.6.
+
+```sql
+-- Check parallel settings
+SHOW max_parallel_workers_per_gather;  -- default 2
+SHOW max_parallel_workers;             -- default 8
+
+-- Increase for analytical workloads (session-level)
+SET max_parallel_workers_per_gather = 4;
+
+-- Verify a query uses parallelism
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT customer_id, SUM(total) FROM orders GROUP BY customer_id;
+-- Look for: Gather / Gather Merge node at the top
+-- "Workers Planned: 4" / "Workers Launched: 4"
+
+-- Force/disable parallel for testing
+SET parallel_tuple_cost = 0;        -- make parallel cheaper
+SET min_parallel_table_scan_size = '8MB';  -- lower threshold
+
+-- Parallel-safe functions (required for custom functions to run in workers)
+CREATE FUNCTION my_func(x INT) RETURNS INT
+LANGUAGE SQL PARALLEL SAFE AS $$ SELECT x * 2 $$;
+```
+
+---
+
+## Section 9 — Index Bloat Detection and Maintenance
+
+```sql
+-- Detect index bloat (indexes with many dead entries)
+SELECT
+    schemaname || '.' || tablename AS table_name,
+    indexname,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
+    idx_scan,
+    idx_tup_read,
+    idx_tup_fetch,
+    -- Unused indexes waste space and slow down writes
+    CASE WHEN idx_scan = 0 THEN 'UNUSED — consider dropping' ELSE 'used' END AS status
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC
+LIMIT 20;
+
+-- Find duplicate indexes (same columns, different names)
+SELECT
+    indrelid::regclass AS table_name,
+    array_agg(indexrelid::regclass) AS indexes,
+    array_agg(indkey) AS index_keys
+FROM pg_index
+GROUP BY indrelid, indkey
+HAVING COUNT(*) > 1;
+
+-- Rebuild a bloated index without locking the table
+REINDEX INDEX CONCURRENTLY idx_orders_customer;
+-- Or rebuild all indexes on a table:
+REINDEX TABLE CONCURRENTLY orders;
+
+-- Check index hit rate (should be > 99% in production)
+SELECT
+    schemaname,
+    relname AS table_name,
+    ROUND(
+        idx_scan::numeric / NULLIF(idx_scan + seq_scan, 0) * 100, 2
+    ) AS index_scan_pct,
+    seq_scan,
+    idx_scan
+FROM pg_stat_user_tables
+ORDER BY seq_scan DESC
+LIMIT 20;
+-- If index_scan_pct is low for a large table: missing index!
+```
+
+---
+
 ## 🏋️ Exercises
 
 ### Exercise 1 — Query Diagnosis
