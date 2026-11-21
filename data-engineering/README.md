@@ -47,8 +47,9 @@ By the end of this course you will have built and can demo:
 | 8 | Large-Scale Data Processing | `08-large-scale-processing/` | 1 week |
 | 9 | 🏗️ Capstone — Full Data Platform | `09-capstone/` | 2 weeks |
 | 10 | Delta Lake vs Apache Iceberg | `10-databricks-vs-iceberg/` | 1 week |
+| 11 | 🏗️ System Design for Data Engineers | `11-system-design/` | 1 week |
 
-**Total: ~16 weeks part-time (2–3 hrs/day)**
+**Total: ~17 weeks part-time (2–3 hrs/day)**
 
 ---
 
@@ -65,6 +66,7 @@ Week 11–12 → 07 Streaming Data
 Week 13    → 08 Large-Scale Data Processing
 Week 14–15 → 09 Capstone Project
 Week 16    → 10 Delta Lake vs Apache Iceberg
+Week 17    → 11 System Design for Data Engineers
 ```
 
 ---
@@ -81,6 +83,7 @@ Week 16    → 10 Delta Lake vs Apache Iceberg
 - [ ] 08 Large-Scale Data Processing
 - [ ] 09 Capstone — End-to-End Data Platform
 - [ ] 10 Delta Lake vs Apache Iceberg
+- [ ] 11 System Design for Data Engineers
 
 ---
 
